@@ -32,7 +32,8 @@ struct always_false : std::false_type {};
 
 template<typename T>
 struct ApiTypename{
-  static_assert(always_false<T>::value , "You must specialize ApiTypename<> for your type");
+  static_assert(always_false<T>::value,
+      "You must specialize ApiTypename<> for your type");
 }; 
 
 template<typename T> struct ApiTypename<const T> : ApiTypename<T> {};
@@ -70,8 +71,6 @@ template<typename ...Ts>
 static constexpr auto wrap_paren(const Ts&...strings){
   return cat("(", strings..., ")");
 }
-
-constexpr auto test_string = wrap_paren("hello", "world");
 
 template<auto s> struct StaticString {
   static constexpr const auto va = s;
@@ -119,7 +118,7 @@ constexpr auto resolveOverload(type_list<R,Ps...>, R (C::*fun)(Ps...) const){
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-/// Function Description
+/// Function/Enum Description
 
 template<typename T>
 struct CamlLinkedList{
@@ -142,13 +141,82 @@ template<typename P, typename... Ps> struct ParamList<P, Ps...>{
   static inline constexpr const CamlLinkedList<cstring>* p = &pp;
 };
 
+struct ApiTypeDescription {
+  cstring    name;
+  const bool conversion_allocates;
+};
 
+struct ApiFunctionDescription {
+  ApiTypeDescription                       return_type;
+  const CamlLinkedList<ApiTypeDescription>*parameters;
+  const size_t                             parameter_count;
+  const bool may_raise_to_ocaml;
+  const bool may_release_lock;          
+};
+
+static constexpr const uint64_t marker_value = 0xe1176dafdeadbeefl;
+
+struct ApiFunctionEntry {
+  cstring wrapper_name;
+  cstring function_name;
+  const std::optional<cstring> class_name;
+  const ApiFunctionDescription description;
+
+  value to_value();
+};
+
+struct ApiEnumEntry {
+  cstring enumName;
+  cstring memberName;
+  const value memberValue;
+
+  value to_value();
+};
+
+enum class ApiEntryKind {
+  Function, EnumMember
+};
+
+struct ApiEntry {
+  const uint64_t marker;
+  const ApiEntryKind kind;
+  union {
+    const ApiFunctionEntry*as_function;
+    const ApiEnumEntry*as_enum;
+  };
+
+  constexpr ApiEntry(const ApiFunctionEntry* f)
+    : marker(marker_value), kind(ApiEntryKind::Function), as_function(f)
+  {}
+
+  constexpr ApiEntry(const ApiEnumEntry* e)
+    : marker(marker_value), kind(ApiEntryKind::EnumMember), as_enum(e)
+  {}
+
+  value to_value();
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Registration helpers
+
+#define CPPCAML_REGISTER_FUN(VARNAME,...) \
+    static inline constexpr CppCaml::ApiFunctionEntry fe_ ## VARNAME{__VA_ARGS__}; \
+    static inline constexpr auto VARNAME \
+    __attribute((used, retain, section("caml_api_registry"))) = \
+    CppCaml::ApiEntry(&fe_ ## VARNAME)
+
+/////////////////////////////////////////////////////////////////////////////////////////
 }
-
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Simple types
 
 DECL_API_TYPENAME(bool, bool);
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Checks
+
 template struct CppCaml::ApiTypename<std::optional<bool> >;
 template struct CppCaml::ApiTypename<std::vector<bool> >;
+template struct CppCaml::ApiTypename<std::pair<bool,std::vector<bool> >>;
+
+CPPCAML_REGISTER_FUN(example, .wrapper_name = "hello");
