@@ -1,0 +1,6 @@
+(foreign_library
+  (archive_name cppcaml)
+  (language cxx)
+  (include_dirs include)
+  (flags :standard -Wall -std=c++23)
+  )
