@@ -9,7 +9,7 @@ type function_description =
   { return_type : type_description
   ; parameters : type_description list
   ; may_raise_to_ocaml : bool
-  ; may_release_lock : bool
+  ; releases_lock : bool
   ; has_implicit_first_argument : bool
   } [@@deriving sexp]
 

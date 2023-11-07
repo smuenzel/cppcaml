@@ -31,7 +31,7 @@ bool apix(bool x, bool){
 }
 
 DECL_API_TYPENAME(int, int);
-F_PROP(apix,MayReleaseLock, true);
+F_PROP(apix,ReleasesLock, false);
 
 CPPCAML_REGISTER_FUN(example
     , .wrapper_name = "caml_hello"

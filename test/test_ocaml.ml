@@ -17,7 +17,7 @@
     (parameters
      (((name bool) (conversion_allocates (false)))
       ((name bool) (conversion_allocates (false)))))
-    (may_raise_to_ocaml true) (may_release_lock true)
+    (may_raise_to_ocaml true) (releases_lock true)
     (has_implicit_first_argument false)))))
 *)
 (*$*)

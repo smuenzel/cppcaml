@@ -54,7 +54,7 @@ struct P_BoolDefaultFalse {
 };
 
 struct P_MayRaiseToOcaml : public P_BoolDefaultTrue {};
-struct P_MayReleaseLock : public P_BoolDefaultFalse {};
+struct P_ReleasesLock : public P_BoolDefaultFalse {};
 struct P_ImplicitFirstArgument : public P_BoolDefaultFalse {};
 
 template<auto T, typename Property>
@@ -185,7 +185,7 @@ struct ApiFunctionDescription {
   ApiTypeDescription                       return_type;
   const CamlLinkedList<ApiTypeDescription>*parameters;
   const bool may_raise_to_ocaml;
-  const bool may_release_lock;          
+  const bool releases_lock;          
   const bool has_implicit_first_argument;
 
   value to_value() const;
@@ -480,6 +480,11 @@ struct CamlConversion<T> {
 
 };
 
+template <typename T>
+concept HasContext = requires() {
+  typename CamlConversion<T>::Context;
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Creation of Function Descriptions
 
@@ -525,15 +530,15 @@ make_function_description(){
   auto return_type = make_return_type(F);
   auto may_raise_to_ocaml =
     get_function_property<F,P_MayRaiseToOcaml>();
-  auto may_release_lock =
-    get_function_property<F,P_MayReleaseLock>();
+  auto releases_lock =
+    get_function_property<F,P_ReleasesLock>();
   auto has_implicit_first_argument =
     get_function_property<F,P_ImplicitFirstArgument>();
   return ApiFunctionDescription{
     .return_type = return_type,
     .parameters = make_parameters(F),
     .may_raise_to_ocaml = may_raise_to_ocaml,
-    .may_release_lock = may_release_lock,
+    .releases_lock = releases_lock,
     .has_implicit_first_argument = has_implicit_first_argument
   };
 }
@@ -602,16 +607,64 @@ template<
 , typename Ps = FunctionTraits<decltype(F)>::ArgTypes
 , typename Seq = FunctionTraits<decltype(F)>::Sequence
 > struct
-CallApi{};
+CallApi;
+
+template<size_t N, typename Context, typename...Ps, typename...PsRepr>
+Context& extract_context(std::tuple<PsRepr...>& ps){
+  auto& elt = std::get<N>(ps);
+  using P = std::tuple_element_t<N,std::remove_reference_t<decltype(ps)>>::type;
+  using Conversion = CamlConversion<P>;
+  if constexpr (std::same_as<std::remove_reference_t<decltype(elt)>, Context>) {
+    return elt;
+  } else if constexpr (std::same_as<P,Context>) {
+    return elt.get();
+  } else {
+    if constexpr (HasContext<P>) {
+      using EltContext = Conversion::Context;
+      if constexpr (std::same_as<EltContext, Context>){
+        return elt.context();
+      } else {
+        return extract_context<N+1,Context,Ps...>(ps);
+      }
+    } else {
+      return extract_context<N+1,Context,Ps...>(ps);
+    }
+  }
+}
 
 template< auto F, typename R, typename... Ps, size_t... Is>
+requires (get_function_property<F,P_ImplicitFirstArgument>() == false)
 struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
   static inline value invoke(decltype(Is, value{})... v_ps){
+    constexpr auto releases_lock = get_function_property<F,P_ReleasesLock>();
     auto index_sequence = std::index_sequence<Is...>(); 
-    std::tuple p_ps{ CamlConversion<Ps>::OfValue::c(v_ps).get()...};
+    std::tuple p_psr{ CamlConversion<Ps>::OfValue::c(v_ps)... };
+
+    auto construct_return =
+      [&p_psr](auto& ret) {
+        using raw_ret = std::remove_reference_t<decltype(ret)>;
+        if constexpr (HasContext<raw_ret>) {
+          using Context = CamlConversion<raw_ret>::Context;
+          auto context = extract_context<0, Context,Ps...>(p_psr);
+          return CamlConversion<raw_ret>::ToValue::c(context, ret);
+        } else { 
+          return CamlConversion<raw_ret>::ToValue::c(ret);
+        }
+      };
+
+    auto p_ps = std::apply([](auto ...x){return std::make_tuple(x.get()...);} , p_psr);
+
+    if constexpr (releases_lock) {
+      caml_enter_blocking_section();
+    };
+
     auto ret = invoke_seq_void(F, p_ps, index_sequence);
-    auto v_ret = CamlConversion<decltype(ret)>::ToValue::c(ret);
-    return v_ret;
+
+    if constexpr (releases_lock) {
+      caml_leave_blocking_section();
+    };
+
+    return construct_return(ret);
   }
 };
 

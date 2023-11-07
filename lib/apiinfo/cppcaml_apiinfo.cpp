@@ -79,7 +79,7 @@ value ApiFunctionDescription::to_value() const{
   Store_field(v_ret,0,this->return_type.to_value());
   Store_field(v_ret,1,list_to_caml(this->parameters));
   Store_field(v_ret,2,Val_bool(this->may_raise_to_ocaml));
-  Store_field(v_ret,3,Val_bool(this->may_release_lock));
+  Store_field(v_ret,3,Val_bool(this->releases_lock));
   Store_field(v_ret,4,Val_bool(this->has_implicit_first_argument));
 
   CAMLreturn(v_ret);
