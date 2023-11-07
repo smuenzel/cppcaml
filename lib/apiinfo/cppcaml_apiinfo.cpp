@@ -37,6 +37,29 @@ value section_to_list(T*start,T*stop){
   }
 }
 
+template<typename T>
+value list_to_caml(const CamlLinkedList<T>* l){
+  if(l == nullptr){
+    return Val_long(0);
+  } else {
+    CAMLparam0();
+    CAMLlocal3(v_l,v_ret,v_tmp);
+    v_l = caml_alloc(2,0);
+    v_ret = v_l;
+    Store_field(v_l, 0, l->data.to_value());
+    Field(v_l,1) = Val_unit;
+    while(l->next){
+      l = l->next;
+      v_tmp = caml_alloc(2,0);
+      Store_field(v_l, 1, v_tmp);
+      v_l = v_tmp;
+      Store_field(v_l,0, l->data.to_value());
+      Field(v_l,1) = Val_unit;
+    };
+    CAMLreturn(v_ret);
+  }
+}
+
 value ApiTypeDescription::to_value() const{
   CAMLparam0();
   CAMLlocal1(v_ret);
@@ -54,7 +77,7 @@ value ApiFunctionDescription::to_value() const{
   v_ret = caml_alloc_small(5,0);
 
   Store_field(v_ret,0,this->return_type.to_value());
-
+  Store_field(v_ret,1,list_to_caml(this->parameters));
   Store_field(v_ret,2,Val_bool(this->may_raise_to_ocaml));
   Store_field(v_ret,3,Val_bool(this->may_release_lock));
   Store_field(v_ret,4,Val_bool(this->has_implicit_first_argument));

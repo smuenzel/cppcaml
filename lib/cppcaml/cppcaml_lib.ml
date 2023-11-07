@@ -7,7 +7,7 @@ type type_description =
 
 type function_description =
   { return_type : type_description
-  ; parameters : unit
+  ; parameters : type_description list
   ; may_raise_to_ocaml : bool
   ; may_release_lock : bool
   ; has_implicit_first_argument : bool
