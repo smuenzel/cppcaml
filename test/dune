@@ -1,0 +1,8 @@
+
+(foreign_library
+  (archive_name cppcaml_test_stubs)
+  (names test_stubs)
+  (language cxx)
+  (flags :standard -Wall -std=c++23 -fconcepts-diagnostics-depth=8)
+  (include_dirs ../include)
+  )

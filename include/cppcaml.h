@@ -200,10 +200,235 @@ struct ApiEntry {
 /// Registration helpers
 
 #define CPPCAML_REGISTER_FUN(VARNAME,...) \
-    static inline constexpr CppCaml::ApiFunctionEntry fe_ ## VARNAME{__VA_ARGS__}; \
-    static inline constexpr auto VARNAME \
+    static inline constexpr CppCaml::ApiFunctionEntry fe_v_ ## VARNAME{__VA_ARGS__}; \
+    static inline constexpr auto fe_ ## VARNAME \
     __attribute((used, retain, section("caml_api_registry"))) = \
-    CppCaml::ApiEntry(&fe_ ## VARNAME)
+    CppCaml::ApiEntry(&fe_v_ ## VARNAME)
+
+#define CPPCAML_REGISTER_ENUM(VARNAME,...) \
+    static inline constexpr CppCaml::ApiFunctionEntry ee_v_ ## VARNAME{__VA_ARGS__}; \
+    static inline constexpr auto ee_ ## VARNAME \
+    __attribute((used, retain, section("caml_api_registry"))) = \
+    CppCaml::ApiEntry(&ee_v_ ## VARNAME)
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Containers
+
+template<typename T> static inline T& Custom_value(value v){
+  return (*((T*)Data_custom_val(v)));
+}
+
+template<typename T> void finalize_custom(value v_custom){
+  Custom_value<T>(v_custom).~T();
+}
+
+template<typename Container> struct ContainerOps {
+  static inline struct custom_operations value =
+    { typeid(Container).name()
+    , &finalize_custom<Container>
+    , custom_compare_default
+    , custom_hash_default
+    , custom_serialize_default
+    , custom_deserialize_default
+    , custom_compare_ext_default
+    , custom_fixed_length_default
+    };
+};
+
+static const int custom_used = 1;
+static const int custom_max = 1000000;
+
+template<typename T>
+struct SharedPointerContainer : private boost::noncopyable {
+  std::shared_ptr<T> t;
+
+  SharedPointerContainer(std::shared_ptr<T>&& t) : t(std::move(t)) {}
+
+  static inline value allocate(std::shared_ptr<T>&& t){
+    typedef SharedPointerContainer<T> This;
+    value v_container =
+      caml_alloc_custom(&ContainerOps<This>::value,sizeof(This),custom_used, custom_max);
+    new(&Custom_value<This>(v_container)) This(std::move(t));
+    return v_container;
+  };
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Conversions
+
+template<typename T> class AutoConversion;
+
+enum class AutoConversionKind {
+  SharedPointer, WithSharedPointerContext
+};
+
+namespace AutoConv {
+  template <typename T, AutoConversionKind k>
+    concept As = 
+    AutoConversion<T>::kind == k;
+
+  template <typename T>
+    concept HasDeleter = requires() {
+      AutoConversion<T>::delete_T;
+    };
+
+  template <typename T>
+    concept HasContext = requires() {
+      typename AutoConversion<T>::Context;
+    };
+}
+
+
+template<typename T>
+struct CamlConversion{
+  static_assert(always_false<T>::value,
+      "You must specialize CamlConversion<> for your type");
+}; 
+
+template<>
+struct CamlConversion<bool> {
+  struct ToValue {
+    static const bool allocates = false;
+
+    static inline value c(bool& b){
+      return Val_bool(b);
+    }
+  };
+
+  struct OfValue {
+    struct Representative {
+      bool v;
+      bool& get() { return v; };
+    };
+
+    static inline Representative c(value v){
+      return { .v = (bool)Bool_val(v) };
+    }
+  };
+};
+
+template<typename T>
+struct CamlConversionSharedPointer {
+  typedef SharedPointerContainer<T> Container;
+
+  struct ToValue {
+    static const bool allocates = true;
+
+    static inline value c(std::shared_ptr<T>&& b){
+      return Container::allocate(b);
+    }
+  };
+
+  struct OfValue {
+    struct Representative {
+      Container&v;
+      
+      operator T&() { return v.t; };
+    };
+
+    static inline Representative c(value v){
+      return { .v = Custom_value<Container>(v) };
+    }
+  };
+};
+
+template<> struct CamlConversionSharedPointer<std::string>;
+
+template<typename T_pointer>
+requires
+(AutoConv::As<T_pointer,AutoConversionKind::SharedPointer>
+ && std::is_pointer_v<T_pointer>)
+struct CamlConversion<T_pointer> {
+  using A = AutoConversion<T_pointer>;
+  using T = std::remove_pointer_t<T_pointer>;
+  using C = CamlConversionSharedPointer<T>;
+  using Container = C::Container;
+
+  struct ToValue : public C::ToValue {
+    template<class Dummy = void>
+      requires AutoConv::HasDeleter<T_pointer>
+    struct Deleter {
+      void operator()(T_pointer p){
+        A::delete_T(p);
+      }
+    };
+
+    static inline value c(T_pointer tp){
+      if constexpr(AutoConv::HasDeleter<T_pointer>) {
+        std::shared_ptr<T> s(tp,Deleter());
+        return value(s);
+      } else {
+        std::shared_ptr<T> s(tp);
+        return value(s);
+      }
+    };
+  };
+
+  struct OfValue : public C::OfValue {
+    operator T_pointer(){ ((Container&)(*this)).get(); }
+  };
+};
+
+template<typename T>
+requires
+(AutoConv::As<T,AutoConversionKind::WithSharedPointerContext>
+ && AutoConv::HasContext<T>
+)
+struct CamlConversion<T> {
+  using A = AutoConversion<T>;
+
+  using Context = A::Context;
+
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Function Properties
+
+template <auto T, typename Property>
+  struct FunctionProperty;
+
+template <auto T, typename Property>
+concept PropertyDefined = requires {
+  FunctionProperty<T,Property>::value;
+};
+
+template<auto p_value>
+struct P_Define {
+  static constexpr const decltype(p_value) value = p_value;
+};
+
+struct P_BoolDefaultTrue {
+  using type = bool;
+  static constexpr const type default_value = true;
+};
+
+struct P_BoolDefaultFalse {
+  using type = bool;
+  static constexpr const type default_value = true;
+};
+
+struct P_MayRaiseToOcaml : public P_BoolDefaultTrue {};
+struct P_MayReleaseLock : public P_BoolDefaultFalse {};
+struct P_ImplicitFirstArgument : public P_BoolDefaultFalse {};
+
+template<auto T, typename Property>
+constexpr const Property::type
+get_function_property(){
+  if constexpr(PropertyDefined<T,Property>){
+    return FunctionProperty<T,Property>::value;
+  } else {
+    return Property::default_value;
+  }
+};
+
+
+#define F_PROP(f,prop,value) \
+  template<> struct FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
+
+extern "C" void f(){}
+F_PROP(f,MayRaiseToOcaml,true);
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 }
