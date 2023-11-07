@@ -10,6 +10,11 @@
   let () =
     print_as_comment ()
 *)(*
-(Function ())
+(Function
+ ((wrapper_name hello) (function_name ()) (class_name ())
+  (description
+   ((return_type ((name bool) (conversion_allocates (false))))
+    (parameters ()) (may_raise_to_ocaml true) (may_release_lock true)
+    (has_implicit_first_argument false)))))
 *)
 (*$*)
