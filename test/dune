@@ -6,3 +6,23 @@
   (flags :standard -Wall -std=c++23 -fconcepts-diagnostics-depth=8)
   (include_dirs ../include)
   )
+
+(library
+  (name cppcaml_test_stubs)
+  (modules)
+  (foreign_archives
+    cppcaml_test_stubs
+    ../lib/apiinfo/cppcaml_apiinfo
+  )
+  (modes native)
+  (library_flags -linkall -cclib -Wl,-lstdc++)
+  )
+
+(cinaps
+  (files test_ocaml.ml)
+  (libraries core cppcaml_lib cppcaml_test_stubs)
+  )
+
+(library
+  (name test_ocaml)
+  )

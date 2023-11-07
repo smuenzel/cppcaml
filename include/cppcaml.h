@@ -71,11 +71,6 @@ get_function_property(){
 #define F_PROP(f,prop,value) \
   template<> struct FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
 
-extern "C" void f(){}
-F_PROP(f,MayRaiseToOcaml,true);
-
-
-
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Names of Types
 
@@ -458,7 +453,6 @@ static consteval const CamlLinkedList<ApiTypeDescription>*
 make_parameters(R (*fun)(Ps...)){
   return ParamList<Ps...>::p;
 }
-
 
 template<auto F>
 static consteval const
