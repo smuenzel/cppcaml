@@ -31,8 +31,12 @@ bool apix(bool x, bool){
 }
 
 DECL_API_TYPENAME(int, int);
+F_PROP(apix,MayReleaseLock, true);
 
-CPPCAML_REGISTER_FUN(example, .wrapper_name = "hello", .description = CppCaml::make_function_description<apix>());
+CPPCAML_REGISTER_FUN(example
+    , .wrapper_name = "hello"
+    , .description = CppCaml::make_function_description<apix>()
+    );
 
 
 apireturn caml_test_unit(value){

@@ -37,10 +37,23 @@ value section_to_list(T*start,T*stop){
   }
 }
 
+value ApiTypeDescription::to_value() const{
+  CAMLparam0();
+  CAMLlocal1(v_ret);
+  v_ret = caml_alloc_small(2,0);
+
+  Store_field(v_ret,0,caml_copy_string(this->name));
+  Store_field(v_ret,1,CamlConversion<std::optional<bool>>::ToValue::c(this->conversion_allocates));
+
+  CAMLreturn(v_ret);
+}
+
 value ApiFunctionDescription::to_value() const{
   CAMLparam0();
   CAMLlocal1(v_ret);
   v_ret = caml_alloc_small(5,0);
+
+  Store_field(v_ret,0,this->return_type.to_value());
 
   Store_field(v_ret,2,Val_bool(this->may_raise_to_ocaml));
   Store_field(v_ret,3,Val_bool(this->may_release_lock));

@@ -1,7 +1,12 @@
 open! Core
 
+type type_description =
+  { name : string
+  ; conversion_allocates : bool option
+  } [@@deriving sexp]
+
 type function_description =
-  { return_type : unit
+  { return_type : type_description
   ; parameters : unit
   ; may_raise_to_ocaml : bool
   ; may_release_lock : bool

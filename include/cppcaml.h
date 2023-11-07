@@ -328,7 +328,7 @@ struct CamlConversion<bool> {
   struct ToValue {
     static const bool allocates = false;
 
-    static inline value c(bool& b){
+    static inline value c(const bool& b){
       return Val_bool(b);
     }
   };
@@ -343,6 +343,31 @@ struct CamlConversion<bool> {
       return { .v = (bool)Bool_val(v) };
     }
   };
+};
+
+template<typename T>
+struct CamlConversion<std::optional<T>> {
+  using Inner = CamlConversion<T>;
+
+  struct ToValue {
+    static const bool allocates = true;
+
+    static inline value c(const std::optional<T>&t){
+      if(t) {
+        CAMLparam0();
+        CAMLlocal2(inner, outer);
+        inner = Inner::ToValue::c(t.value());
+        outer = caml_alloc_small(1,0);
+        Field(outer,0) = inner;
+        CAMLreturn(outer);
+      } else {
+        return Val_none;
+      }
+    }
+  };
+
+  /* CR smuenzel: not completed */
+
 };
 
 template<typename T>
@@ -369,8 +394,6 @@ struct CamlConversionSharedPointer {
     }
   };
 };
-
-template<> struct CamlConversionSharedPointer<std::string>;
 
 template<typename T_pointer>
 requires
