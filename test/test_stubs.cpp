@@ -26,13 +26,14 @@ template<> struct CppCaml::AutoConversion<struct my_rc*>{
 
 };
 
-bool apix(bool x){
+bool apix(bool x, bool){
   return x+1;
 }
 
 DECL_API_TYPENAME(int, int);
 
 CPPCAML_REGISTER_FUN(example, .wrapper_name = "hello", .description = CppCaml::make_function_description<apix>());
+
 
 apireturn caml_test_unit(value){
   return Val_unit;

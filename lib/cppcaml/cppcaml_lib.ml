@@ -1,7 +1,20 @@
 open! Core
 
-type function_entry = unit
-[@@deriving sexp]
+type function_description =
+  { return_type : unit
+  ; parameters : unit
+  ; may_raise_to_ocaml : bool
+  ; may_release_lock : bool
+  ; has_implicit_first_argument : bool
+  } [@@deriving sexp]
+
+type function_entry =
+  { wrapper_name : string
+  ; function_name : unit
+  ; class_name : unit
+  ; description : function_description
+  } [@@deriving sexp]
+
 type enum_entry = unit
 [@@deriving sexp]
 

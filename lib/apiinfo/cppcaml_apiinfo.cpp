@@ -37,13 +37,34 @@ value section_to_list(T*start,T*stop){
   }
 }
 
-value ApiEntry::to_value(){
+value ApiFunctionDescription::to_value() const{
+  CAMLparam0();
+  CAMLlocal1(v_ret);
+  v_ret = caml_alloc_small(5,0);
+
+  Store_field(v_ret,2,Val_bool(this->may_raise_to_ocaml));
+  Store_field(v_ret,3,Val_bool(this->may_release_lock));
+  Store_field(v_ret,4,Val_bool(this->has_implicit_first_argument));
+
+  CAMLreturn(v_ret);
+}
+
+value ApiFunctionEntry::to_value() const{
+  CAMLparam0();
+  CAMLlocal1(v_ret);
+  v_ret = caml_alloc_small(4,0);
+  Store_field(v_ret,0,caml_copy_string(this->wrapper_name));
+  Store_field(v_ret,3,this->description.to_value());
+  CAMLreturn(v_ret);
+}
+
+value ApiEntry::to_value() const{
   CAMLparam0();
   CAMLlocal1(v_ret);
   switch(this->kind){
     case ApiEntryKind::Function:
       v_ret = caml_alloc_small(1,0);
-      Store_field(v_ret,0,Val_unit);
+      Store_field(v_ret,0,this->as_function->to_value());
       break;
     case ApiEntryKind::EnumMember:
       v_ret = caml_alloc_small(1,1);

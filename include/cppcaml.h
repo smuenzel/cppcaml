@@ -50,7 +50,7 @@ struct P_BoolDefaultTrue {
 
 struct P_BoolDefaultFalse {
   using type = bool;
-  static constexpr const type default_value = true;
+  static constexpr const type default_value = false;
 };
 
 struct P_MayRaiseToOcaml : public P_BoolDefaultTrue {};
@@ -69,7 +69,7 @@ get_function_property(){
 
 
 #define F_PROP(f,prop,value) \
-  template<> struct FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
+  template<> struct CppCaml::FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Names of Types
@@ -177,6 +177,8 @@ struct ApiTypeDescription {
   cstring    name;
   // Only set for types that can be converted to ocaml
   const std::optional<bool> conversion_allocates;
+
+  value to_value() const;
 };
 
 struct ApiFunctionDescription {
@@ -186,6 +188,7 @@ struct ApiFunctionDescription {
   const bool may_release_lock;          
   const bool has_implicit_first_argument;
 
+  value to_value() const;
 };
 
 static constexpr const uint64_t marker_value = 0xe1176dafdeadbeefl;
@@ -196,7 +199,7 @@ struct ApiFunctionEntry {
   const std::optional<cstring> class_name;
   const ApiFunctionDescription description;
 
-  value to_value();
+  value to_value() const;
 };
 
 struct ApiEnumEntry {
@@ -204,7 +207,7 @@ struct ApiEnumEntry {
   cstring memberName;
   const value memberValue;
 
-  value to_value();
+  value to_value() const;
 };
 
 enum class ApiEntryKind {
@@ -227,7 +230,7 @@ struct ApiEntry {
     : marker(marker_value), kind(ApiEntryKind::EnumMember), as_enum(e)
   {}
 
-  value to_value();
+  value to_value() const;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
