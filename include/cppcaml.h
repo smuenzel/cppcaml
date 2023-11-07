@@ -28,6 +28,55 @@ template<typename T>
 struct always_false : std::false_type {};
 
 /////////////////////////////////////////////////////////////////////////////////////////
+/// Function Properties
+
+template <auto T, typename Property>
+  struct FunctionProperty;
+
+template <auto T, typename Property>
+concept PropertyDefined = requires {
+  FunctionProperty<T,Property>::value;
+};
+
+template<auto p_value>
+struct P_Define {
+  static constexpr const decltype(p_value) value = p_value;
+};
+
+struct P_BoolDefaultTrue {
+  using type = bool;
+  static constexpr const type default_value = true;
+};
+
+struct P_BoolDefaultFalse {
+  using type = bool;
+  static constexpr const type default_value = true;
+};
+
+struct P_MayRaiseToOcaml : public P_BoolDefaultTrue {};
+struct P_MayReleaseLock : public P_BoolDefaultFalse {};
+struct P_ImplicitFirstArgument : public P_BoolDefaultFalse {};
+
+template<auto T, typename Property>
+constexpr const Property::type
+get_function_property(){
+  if constexpr(PropertyDefined<T,Property>){
+    return FunctionProperty<T,Property>::value;
+  } else {
+    return Property::default_value;
+  }
+};
+
+
+#define F_PROP(f,prop,value) \
+  template<> struct FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
+
+extern "C" void f(){}
+F_PROP(f,MayRaiseToOcaml,true);
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
 /// Names of Types
 
 template<typename T>
@@ -129,29 +178,19 @@ struct CamlLinkedList{
     : data{data}, next{next} {}
 };
 
-template<typename... Ps> struct ParamList;
-
-template<> struct ParamList<>{
-  static constexpr const CamlLinkedList<cstring>* p = nullptr;
-};
-
-template<typename P, typename... Ps> struct ParamList<P, Ps...>{
-  static inline constexpr const CamlLinkedList<cstring> pp =
-    CamlLinkedList(ApiTypename<P>::name,ParamList<Ps...>::p);
-  static inline constexpr const CamlLinkedList<cstring>* p = &pp;
-};
-
 struct ApiTypeDescription {
   cstring    name;
-  const bool conversion_allocates;
+  // Only set for types that can be converted to ocaml
+  const std::optional<bool> conversion_allocates;
 };
 
 struct ApiFunctionDescription {
   ApiTypeDescription                       return_type;
   const CamlLinkedList<ApiTypeDescription>*parameters;
-  const size_t                             parameter_count;
   const bool may_raise_to_ocaml;
   const bool may_release_lock;          
+  const bool has_implicit_first_argument;
+
 };
 
 static constexpr const uint64_t marker_value = 0xe1176dafdeadbeefl;
@@ -383,51 +422,63 @@ struct CamlConversion<T> {
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
-/// Function Properties
+/// Creation of Function Descriptions
 
-template <auto T, typename Property>
-  struct FunctionProperty;
-
-template <auto T, typename Property>
-concept PropertyDefined = requires {
-  FunctionProperty<T,Property>::value;
+template<typename T>
+static consteval const ApiTypeDescription make_type_description(){
+  std::optional<bool> conversion_allocates;
+  if constexpr (requires { typename CamlConversion<T>::ToValue; } )
+    conversion_allocates = CamlConversion<T>::ToValue::allocates;
+  ApiTypeDescription t{
+    .name = ApiTypename<T>::name::value,
+    .conversion_allocates = conversion_allocates
+  };
+  return t;
 };
 
-template<auto p_value>
-struct P_Define {
-  static constexpr const decltype(p_value) value = p_value;
+template<typename R, typename... Ps>
+static consteval const ApiTypeDescription make_return_type(R (*fun)(Ps...)){
+  return make_type_description<R>();
+}
+
+template<typename... Ps> struct ParamList;
+
+template<> struct ParamList<>{
+  static constexpr const CamlLinkedList<ApiTypeDescription>* p = nullptr;
 };
 
-struct P_BoolDefaultTrue {
-  using type = bool;
-  static constexpr const type default_value = true;
+template<typename P, typename... Ps> struct ParamList<P, Ps...>{
+  static inline constexpr const CamlLinkedList<ApiTypeDescription> pp =
+    CamlLinkedList(make_type_description<P>(),ParamList<Ps...>::p);
+  static inline constexpr const CamlLinkedList<ApiTypeDescription>* p = &pp;
 };
 
-struct P_BoolDefaultFalse {
-  using type = bool;
-  static constexpr const type default_value = true;
-};
-
-struct P_MayRaiseToOcaml : public P_BoolDefaultTrue {};
-struct P_MayReleaseLock : public P_BoolDefaultFalse {};
-struct P_ImplicitFirstArgument : public P_BoolDefaultFalse {};
-
-template<auto T, typename Property>
-constexpr const Property::type
-get_function_property(){
-  if constexpr(PropertyDefined<T,Property>){
-    return FunctionProperty<T,Property>::value;
-  } else {
-    return Property::default_value;
-  }
-};
+template <typename R, typename... Ps>
+static consteval const CamlLinkedList<ApiTypeDescription>*
+make_parameters(R (*fun)(Ps...)){
+  return ParamList<Ps...>::p;
+}
 
 
-#define F_PROP(f,prop,value) \
-  template<> struct FunctionProperty<f,P_ ## prop> : public P_Define<value> {}
-
-extern "C" void f(){}
-F_PROP(f,MayRaiseToOcaml,true);
+template<auto F>
+static consteval const
+ApiFunctionDescription
+make_function_description(){
+  auto return_type = make_return_type(F);
+  auto may_raise_to_ocaml =
+    get_function_property<F,P_MayRaiseToOcaml>();
+  auto may_release_lock =
+    get_function_property<F,P_MayReleaseLock>();
+  auto has_implicit_first_argument =
+    get_function_property<F,P_ImplicitFirstArgument>();
+  return ApiFunctionDescription{
+    .return_type = return_type,
+    .parameters = make_parameters(F),
+    .may_raise_to_ocaml = may_raise_to_ocaml,
+    .may_release_lock = may_release_lock,
+    .has_implicit_first_argument = has_implicit_first_argument
+  };
+}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -443,5 +494,3 @@ DECL_API_TYPENAME(bool, bool);
 template struct CppCaml::ApiTypename<std::optional<bool> >;
 template struct CppCaml::ApiTypename<std::vector<bool> >;
 template struct CppCaml::ApiTypename<std::pair<bool,std::vector<bool> >>;
-
-CPPCAML_REGISTER_FUN(example, .wrapper_name = "hello");
