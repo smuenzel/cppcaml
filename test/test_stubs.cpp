@@ -34,9 +34,13 @@ DECL_API_TYPENAME(int, int);
 F_PROP(apix,MayReleaseLock, true);
 
 CPPCAML_REGISTER_FUN(example
-    , .wrapper_name = "hello"
+    , .wrapper_name = "caml_hello"
     , .description = CppCaml::make_function_description<apix>()
     );
+
+apireturn caml_hello(value a, value b){
+  return CppCaml::CallApi<apix>::invoke(a, b);
+}
 
 
 apireturn caml_test_unit(value){

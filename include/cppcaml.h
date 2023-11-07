@@ -345,6 +345,19 @@ struct CamlConversion<bool> {
   };
 };
 
+struct Void {};
+
+template<>
+struct CamlConversion<Void> {
+  struct ToValue {
+    static const bool allocates = false;
+
+    static inline value c(const Void &){
+      return Val_unit;
+    }
+  };
+};
+
 template<>
 struct CamlConversion<cstring> {
   struct ToValue {
@@ -525,6 +538,82 @@ make_function_description(){
   };
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Calling
+
+// Needed so that we can expand the parameter pack. There must be a better way.....
+template<typename T_first, typename T_second> using first_type = T_first;
+template<typename T_first, size_t T_second> using first_type_s = T_first;
+
+// Invoke a function, and possibly substitute void return arguments
+
+// https://stackoverflow.com/a/51454205
+template<typename F, typename... Ps, size_t... is, typename Result = std::invoke_result_t<F,Ps...>>
+requires (!std::same_as<Result,void>)
+inline Result invoke_seq_void(F&& f, std::tuple<Ps...> ps, std::index_sequence<is...> iseq){
+  return std::invoke(std::forward<F>(f), get<is>(ps)...);
+};
+
+template<typename F, typename... Ps, size_t... is, typename Result = std::invoke_result_t<F,Ps...>>
+requires (std::same_as<Result,void>)
+inline Void invoke_seq_void(F&& f, std::tuple<Ps...> ps, std::index_sequence<is...> iseq){
+  std::invoke(std::forward<F>(f), get<is>(ps)...);
+  return {};
+};
+
+// End Invoke
+
+template<typename... Ts> struct TypeList {
+};
+
+template<size_t N, typename T> struct TypeListElt;
+
+template<size_t N, typename T, typename... Ts>
+struct TypeListElt<N,TypeList<T,Ts...>>
+  : TypeListElt<N-1,TypeList<Ts...>> {};
+
+template<typename T, typename... Ts>
+struct TypeListElt<0,TypeList<T, Ts...>> { using type = T; };
+
+template <size_t N, typename T> using TypeListN =
+  TypeListElt<N,T>::type;
+
+// https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
+template<typename F> struct FunctionTraits;
+
+template<typename R, typename... Args>
+struct FunctionTraits<R(*)(Args...)>
+{
+    using Pointer = R(*)(Args...);
+    using RetType = R;
+    using ArgTypes = TypeList<Args...>;
+    static constexpr std::size_t ArgCount = sizeof...(Args);
+    template<std::size_t N>
+    using NthArg = TypeListN<N,ArgTypes>;
+    using Sequence = std::index_sequence_for<Args...>;
+
+    template<typename T>
+    using ArgsAsUniformTuple = std::tuple<first_type<T,Args>...>;
+};
+
+template<
+  auto F
+, typename R = FunctionTraits<decltype(F)>::RetType
+, typename Ps = FunctionTraits<decltype(F)>::ArgTypes
+, typename Seq = FunctionTraits<decltype(F)>::Sequence
+> struct
+CallApi{};
+
+template< auto F, typename R, typename... Ps, size_t... Is>
+struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
+  static inline value invoke(decltype(Is, value{})... v_ps){
+    auto index_sequence = std::index_sequence<Is...>(); 
+    std::tuple p_ps{ CamlConversion<Ps>::OfValue::c(v_ps).get()...};
+    auto ret = invoke_seq_void(F, p_ps, index_sequence);
+    auto v_ret = CamlConversion<decltype(ret)>::ToValue::c(ret);
+    return v_ret;
+  }
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////
 }
@@ -532,6 +621,7 @@ make_function_description(){
 /// Simple types
 
 DECL_API_TYPENAME(bool, bool);
+DECL_API_TYPENAME(CppCaml::cstring, string);
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Checks
