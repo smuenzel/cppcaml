@@ -15,8 +15,8 @@ type function_description =
 
 type function_entry =
   { wrapper_name : string
-  ; function_name : unit
-  ; class_name : unit
+  ; function_name : string
+  ; class_name : string option
   ; description : function_description
   } [@@deriving sexp]
 

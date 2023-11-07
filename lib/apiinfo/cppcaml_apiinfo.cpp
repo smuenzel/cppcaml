@@ -89,7 +89,9 @@ value ApiFunctionEntry::to_value() const{
   CAMLparam0();
   CAMLlocal1(v_ret);
   v_ret = caml_alloc_small(4,0);
-  Store_field(v_ret,0,caml_copy_string(this->wrapper_name));
+  Store_field(v_ret,0,CamlConversion<cstring>::ToValue::c(this->wrapper_name));
+  Store_field(v_ret,1,CamlConversion<cstring>::ToValue::c(this->function_name));
+  Store_field(v_ret,2,CamlConversion<std::optional<cstring>>::ToValue::c(this->class_name));
   Store_field(v_ret,3,this->description.to_value());
   CAMLreturn(v_ret);
 }

@@ -11,7 +11,7 @@
     print_as_comment ()
 *)(*
 (Function
- ((wrapper_name hello) (function_name ()) (class_name ())
+ ((wrapper_name hello) (function_name "") (class_name ())
   (description
    ((return_type ((name bool) (conversion_allocates (false))))
     (parameters

@@ -345,6 +345,31 @@ struct CamlConversion<bool> {
   };
 };
 
+template<>
+struct CamlConversion<cstring> {
+  struct ToValue {
+    static const bool allocates = true;
+
+    static inline value c(const cstring& s){
+      if(s)
+        return caml_copy_string(s);
+      else
+        return caml_copy_string("");
+    }
+  };
+
+  struct OfValue {
+    struct Representative {
+      cstring v;
+      cstring& get() { return v; };
+    };
+
+    static inline Representative c(value v){
+      return { .v = String_val(v) };
+    }
+  };
+};
+
 template<typename T>
 struct CamlConversion<std::optional<T>> {
   using Inner = CamlConversion<T>;
