@@ -35,6 +35,7 @@ F_PROP(apix,ReleasesLock, false);
 
 CPPCAML_REGISTER_FUN(example
     , .wrapper_name = "caml_hello"
+    , .function_name = "apix"
     , .description = CppCaml::make_function_description<apix>()
     );
 
