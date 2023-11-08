@@ -336,7 +336,7 @@ struct CamlConversion<bool> {
   struct OfValue {
     struct Representative {
       bool v;
-      bool& get() { return v; };
+      operator bool&() { return v; }
     };
 
     static inline Representative c(value v){
@@ -374,7 +374,7 @@ struct CamlConversion<cstring> {
   struct OfValue {
     struct Representative {
       cstring v;
-      cstring& get() { return v; };
+      operator cstring&() { return v; }
     };
 
     static inline Representative c(value v){
@@ -464,7 +464,9 @@ struct CamlConversion<T_pointer> {
   };
 
   struct OfValue : public C::OfValue {
-    operator T_pointer(){ ((Container&)(*this)).get(); }
+    struct Representative : public C::OfValue::Representative {
+      operator T_pointer(){ ((Container&)(*this)).get(); }
+    };
   };
 };
 
@@ -478,6 +480,13 @@ struct CamlConversion<T> {
 
   using Context = A::Context;
 
+  struct ToValue {
+
+  };
+
+  struct OfValue {
+
+  };
 };
 
 template <typename T>
@@ -601,23 +610,16 @@ struct FunctionTraits<R(*)(Args...)>
     using ArgsAsUniformTuple = std::tuple<first_type<T,Args>...>;
 };
 
-template<
-  auto F
-, typename R = FunctionTraits<decltype(F)>::RetType
-, typename Ps = FunctionTraits<decltype(F)>::ArgTypes
-, typename Seq = FunctionTraits<decltype(F)>::Sequence
-> struct
-CallApi;
-
 template<size_t N, typename Context, typename...Ps, typename...PsRepr>
 Context& extract_context(std::tuple<PsRepr...>& ps){
+  // CR smuenzel: check for operator Context()
   auto& elt = std::get<N>(ps);
   using P = std::tuple_element_t<N,std::remove_reference_t<decltype(ps)>>::type;
   using Conversion = CamlConversion<P>;
   if constexpr (std::same_as<std::remove_reference_t<decltype(elt)>, Context>) {
     return elt;
   } else if constexpr (std::same_as<P,Context>) {
-    return elt.get();
+    return (Context)elt;
   } else {
     if constexpr (HasContext<P>) {
       using EltContext = Conversion::Context;
@@ -631,6 +633,14 @@ Context& extract_context(std::tuple<PsRepr...>& ps){
     }
   }
 }
+
+template<
+  auto F
+, typename R = FunctionTraits<decltype(F)>::RetType
+, typename Ps = FunctionTraits<decltype(F)>::ArgTypes
+, typename Seq = FunctionTraits<decltype(F)>::Sequence
+> struct
+CallApi;
 
 template< auto F, typename R, typename... Ps, size_t... Is>
 requires (get_function_property<F,P_ImplicitFirstArgument>() == false)
@@ -652,7 +662,7 @@ struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
         }
       };
 
-    auto p_ps = std::apply([](auto ...x){return std::make_tuple(x.get()...);} , p_psr);
+    auto p_ps = std::apply([](auto ...x){return std::make_tuple((Ps&)x...);} , p_psr);
 
     if constexpr (releases_lock) {
       caml_enter_blocking_section();
