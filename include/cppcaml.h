@@ -612,18 +612,16 @@ struct FunctionTraits<R(*)(Args...)>
 
 template<size_t N, typename Context, typename...Ps, typename...PsRepr>
 Context& extract_context(std::tuple<PsRepr...>& ps){
-  // CR smuenzel: check for operator Context()
   auto& elt = std::get<N>(ps);
   using P = std::tuple_element_t<N,std::remove_reference_t<decltype(ps)>>::type;
   using Conversion = CamlConversion<P>;
-  if constexpr (std::same_as<std::remove_reference_t<decltype(elt)>, Context>) {
-    return elt;
-  } else if constexpr (std::same_as<P,Context>) {
-    return (Context)elt;
+  if constexpr (std::is_convertible_v<decltype(elt), Context&>) {
+    return (Context&)elt;
   } else {
     if constexpr (HasContext<P>) {
       using EltContext = Conversion::Context;
-      if constexpr (std::same_as<EltContext, Context>){
+      // CR smuenzel: should there be a reference?
+      if constexpr (std::is_convertible_v<EltContext,Context>){
         return elt.context();
       } else {
         return extract_context<N+1,Context,Ps...>(ps);
@@ -665,6 +663,7 @@ struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
     auto p_ps = std::apply([](auto ...x){return std::make_tuple((Ps&)x...);} , p_psr);
 
     if constexpr (releases_lock) {
+      // CR smuenzel: for some parameters, we might need to copy them
       caml_enter_blocking_section();
     };
 
