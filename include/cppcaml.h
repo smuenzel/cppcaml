@@ -564,13 +564,13 @@ template<typename T_first, size_t T_second> using first_type_s = T_first;
 // https://stackoverflow.com/a/51454205
 template<typename F, typename... Ps, size_t... is, typename Result = std::invoke_result_t<F,Ps...>>
 requires (!std::same_as<Result,void>)
-inline Result invoke_seq_void(F&& f, std::tuple<Ps...>& ps, std::index_sequence<is...> iseq){
+inline Result invoke_seq_void(F&& f, std::tuple<Ps&...>& ps, std::index_sequence<is...> iseq){
   return std::invoke(std::forward<F>(f), get<is>(ps)...);
 };
 
 template<typename F, typename... Ps, size_t... is, typename Result = std::invoke_result_t<F,Ps...>>
 requires (std::same_as<Result,void>)
-inline Void invoke_seq_void(F&& f, std::tuple<Ps...>& ps, std::index_sequence<is...> iseq){
+inline Void invoke_seq_void(F&& f, std::tuple<Ps&...>& ps, std::index_sequence<is...> iseq){
   std::invoke(std::forward<F>(f), get<is>(ps)...);
   return {};
 };
@@ -605,16 +605,17 @@ struct FunctionTraits<R(*)(Args...)>
   template<std::size_t N>
     using NthArg = TypeListN<N,ArgTypes>;
   using Sequence = std::index_sequence_for<Args...>;
-
-  template<typename T>
-    using ArgsAsUniformTuple = std::tuple<first_type<T,Args>...>;
 };
 
 template<typename C, typename R, typename... Args>
 struct FunctionTraits<R (C::*)(Args...)>
 {
+  using Pointer = R (C::*)(Args...);
   using RetType = R;
   using ArgTypes = TypeList<C,Args...>;
+  static constexpr std::size_t ArgCount = sizeof...(Args) + 1;
+  template<std::size_t N>
+    using NthArg = TypeListN<N,ArgTypes>;
   using Sequence = std::index_sequence_for<C,Args...>;
 };
 
@@ -654,7 +655,7 @@ struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
   static inline value invoke(decltype(Is, value{})... v_ps){
     constexpr auto releases_lock = get_function_property<F,P_ReleasesLock>();
     auto index_sequence = std::index_sequence<Is...>(); 
-    auto p_psr = std::make_tuple(CamlConversion<Ps>::OfValue::c(v_ps)...);
+    std::tuple<typename CamlConversion<Ps>::OfValue::Representative...> p_psr(v_ps...);
 
     auto construct_return =
       [&p_psr](auto& ret) {
@@ -668,7 +669,7 @@ struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
         }
       };
 
-    auto p_ps = std::apply([](auto& ...x){return std::make_tuple((Ps&)x...);} , p_psr);
+    std::tuple<Ps&...> p_ps(p_psr);
 
     if constexpr (releases_lock) {
       // CR smuenzel: for some parameters, we might need to copy them

@@ -65,7 +65,7 @@ void print_x(){
   printf("e\n");
 }
 
-struct MyClass /* : private boost::noncopyable */ {
+struct MyClass : private boost::noncopyable {
   int x;
 
   void incr() { 
@@ -75,6 +75,8 @@ struct MyClass /* : private boost::noncopyable */ {
   int get_x() { return x; }
 
   MyClass(int x) : x(x) {}
+
+  MyClass(MyClass&& rhs) = default;
 };
 
 DECL_API_TYPENAME(MyClass,myclass);
@@ -92,11 +94,11 @@ template<> struct CppCaml::CamlConversion<MyClass> {
     struct Representative {
       MyClass m;
       operator MyClass&() { return m; }
-    };
 
-    static inline Representative c(value v){
-      return { .m{Int_val(v)} };
-    }
+      Representative(value v) : m(Int_val(v)){
+
+      }
+    };
   };
 };
 
