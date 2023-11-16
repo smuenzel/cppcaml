@@ -577,7 +577,12 @@ inline Void invoke_seq_void(F&& f, std::tuple<Ps&...>& ps, std::index_sequence<i
 
 // End Invoke
 
-template<typename... Ts> struct TypeList {
+template<typename... Ts> struct TypeList;
+
+template<> struct TypeList<> {};
+
+template<typename T, typename... Ts> struct TypeList<T, Ts...> {
+  using Tail = TypeList<Ts...>;
 };
 
 template<size_t N, typename T> struct TypeListElt;
@@ -595,16 +600,18 @@ template <size_t N, typename T> using TypeListN =
 // https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
 template<typename F> struct FunctionTraits;
 
-template<typename R, typename... Args>
-struct FunctionTraits<R(*)(Args...)>
+template<typename R, typename Arg0, typename... Args>
+struct FunctionTraits<R(*)(Arg0, Args...)>
 {
-  using Pointer = R(*)(Args...);
+  using Pointer = R(*)(Arg0, Args...);
   using RetType = R;
-  using ArgTypes = TypeList<Args...>;
-  static constexpr std::size_t ArgCount = sizeof...(Args);
+  using ArgTypes = TypeList<Arg0, Args...>;
+  using ArgTypesNoFirst = TypeList<Args...>;
+  static constexpr std::size_t ArgCount = 1 + sizeof...(Args);
   template<std::size_t N>
     using NthArg = TypeListN<N,ArgTypes>;
-  using Sequence = std::index_sequence_for<Args...>;
+  using Sequence = std::index_sequence_for<Arg0, Args...>;
+  using SequenceNoFirst = std::index_sequence_for<Args...>;
 };
 
 template<typename C, typename R, typename... Args>
@@ -613,10 +620,12 @@ struct FunctionTraits<R (C::*)(Args...)>
   using Pointer = R (C::*)(Args...);
   using RetType = R;
   using ArgTypes = TypeList<C,Args...>;
+  using ArgTypesNoFirst = TypeList<Args...>;
   static constexpr std::size_t ArgCount = sizeof...(Args) + 1;
   template<std::size_t N>
     using NthArg = TypeListN<N,ArgTypes>;
   using Sequence = std::index_sequence_for<C,Args...>;
+  using SequenceNoFirst = std::index_sequence_for<Args...>;
 };
 
 template<size_t N, typename Context, typename...Ps, typename...PsRepr>
@@ -641,38 +650,60 @@ Context& extract_context(std::tuple<PsRepr...>& ps){
   }
 }
 
+template<typename Context, typename...Ps, typename...PsRepr>
+Context& extract_context(std::tuple<PsRepr...>& ps){
+  return extract_context<0,Context,Ps...>(ps);
+}
+
 template<
   auto F
 , typename R = FunctionTraits<decltype(F)>::RetType
 , typename Ps = FunctionTraits<decltype(F)>::ArgTypes
 , typename Seq = FunctionTraits<decltype(F)>::Sequence
+, typename FirstP = typename FunctionTraits<decltype(F)>::NthArg<0>
+, typename PsNoFirst = FunctionTraits<decltype(F)>::ArgTypesNoFirst
+, typename SeqNoFirst = FunctionTraits<decltype(F)>::SequenceNoFirst
 > struct
 CallApi;
 
-template< auto F, typename R, typename... Ps, size_t... Is>
-requires (get_function_property<F,P_ImplicitFirstArgument>() == false)
-struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
-  static inline value invoke(decltype(Is, value{})... v_ps){
+template< auto F, typename R, typename... Ps, size_t... Is, typename FirstP, typename... PsNoFirst, size_t... IsNoFirst>
+class CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>,FirstP,TypeList<PsNoFirst...>,std::index_sequence<IsNoFirst...>>{
+
+public:
+  using RepresentativeTuple =
+    std::tuple<typename CamlConversion<Ps>::OfValue::Representative...>;
+
+  using RepresentativeTupleRef =
+    std::tuple<typename CamlConversion<Ps>::OfValue::Representative&...>;
+
+  using RepresentativeTupleNoFirst =
+    std::tuple<typename CamlConversion<PsNoFirst>::OfValue::Representative...>;
+
+private:
+
+  static inline value inner_invoke(RepresentativeTupleRef& p_psr){
     constexpr auto releases_lock = get_function_property<F,P_ReleasesLock>();
     auto index_sequence = std::index_sequence<Is...>(); 
-    std::tuple<typename CamlConversion<Ps>::OfValue::Representative...> p_psr(v_ps...);
 
     auto construct_return =
       [&p_psr](auto& ret) {
         using raw_ret = std::remove_reference_t<decltype(ret)>;
         if constexpr (HasContext<raw_ret>) {
           using Context = CamlConversion<raw_ret>::Context;
-          auto context = extract_context<0, Context,Ps...>(p_psr);
+          auto context = extract_context<Context,Ps...>(p_psr);
           return CamlConversion<raw_ret>::ToValue::c(context, ret);
         } else { 
           return CamlConversion<raw_ret>::ToValue::c(ret);
         }
       };
 
+    /* Same comment about noncopyable types applies */
     std::tuple<Ps&...> p_ps(p_psr);
 
     if constexpr (releases_lock) {
-      // CR smuenzel: for some parameters, we might need to copy them
+      // CR smuenzel: for some parameters, we might need to copy them, since the value
+      // in p_psr might refer directly to memory in the ocaml heap (e.g. for strings, or
+      // inplace custom blocks). This also applies to the context if there is one.
       caml_enter_blocking_section();
     };
 
@@ -683,6 +714,31 @@ struct CallApi<F,R,TypeList<Ps...>,std::index_sequence<Is...>>{
     };
 
     return construct_return(ret);
+  }
+
+public:
+  template<Void dummy = {}>
+    requires (get_function_property<F,P_ImplicitFirstArgument>() == false)
+  static inline value invoke(decltype(Is, value{})... v_ps){
+    /* For noncopyable types, we're required to construct them inplace, so 
+     * a constructor needs to be available that takes a value and returns
+     * a Representative */
+    RepresentativeTuple p_psr(v_ps...);
+    RepresentativeTupleRef p_psr_r(p_psr);
+
+    return inner_invoke(p_psr_r);
+  }
+
+  template<Void dummy = {}>
+    requires (get_function_property<F,P_ImplicitFirstArgument>() == true)
+  static inline value invoke(decltype(IsNoFirst,value{})... v_ps){
+    RepresentativeTupleNoFirst p_psr0(v_ps...);
+
+    auto first = extract_context<FirstP, PsNoFirst...>(p_psr0);
+
+    RepresentativeTupleRef p_psr_r(first,std::get<IsNoFirst...>(p_psr0));
+
+    return inner_invoke(p_psr_r);
   }
 };
 
