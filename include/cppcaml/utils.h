@@ -13,11 +13,12 @@ void __attribute__((noreturn)) caml_failwith_printf(const char * fmt, ...)
   va_start(args, fmt);
   len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
-  char* buf = (char*)alloca(len+1);
+  value v_string = caml_alloc_string(len);
+  char* buf = (char*)Bytes_val(v_string);
   va_start(args, fmt);
   vsnprintf(buf, len+1, fmt, args);
   va_end(args);
-  caml_failwith(buf);
+  caml_failwith_value(v_string);
 }
 
 template<typename T>
@@ -155,6 +156,5 @@ static const StaticCamlArray
  > testCamlArray;
 
 }
-
 
 #endif

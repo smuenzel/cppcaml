@@ -1,0 +1,42 @@
+#if !defined(_CPPCAML_CONTAINER_H_)
+#define _CPPCAML_CONTAINER_H_
+
+#include <memory>
+
+#include <cppcaml/conversion.h>
+
+namespace Cppcaml
+{
+
+template<typename T>
+struct SharedPtrContainer {
+  static constexpr const char* typename_caml = "hello";
+  using CppType = T*;
+  using Representative = std::shared_ptr<T>;
+  using Value = std::shared_ptr<T>;
+  using ValueExtraParameters = std::tuple<>;
+
+  static constexpr bool to_caml_allocates = true;
+
+  static value to_caml(const std::shared_ptr<T>&) {
+    return 0;
+  }
+
+  static std::shared_ptr<T> to_representative(T* t) {
+    return std::shared_ptr<T>(t);
+  }
+
+};
+
+
+template<>
+struct CamlType<int*> : SharedPtrContainer<int> { };
+
+static_assert(HasToCaml<int*>);
+
+
+}
+
+
+
+#endif
