@@ -41,11 +41,46 @@ TypeListForAll<HasOfCamlV,typename FunctionTraits<F>::ArgTypes>::value
 
 template<typename F>
 concept ResultConvertible =
-HasToCaml<typename SubVoid<typename FunctionTraits<F>::ReturnType>::type>
+HasToCaml<typename SubVoid<typename FunctionTraits<F>::RetType>::type>
 ;
 
 template<typename F>
 concept FunctionConvertible = ArgumentsConvertible<F> && ResultConvertible<F>;
+
+template<auto f, auto... Properties>
+requires FunctionConvertible<decltype(f)>
+struct Invoke
+{
+  using ResultType = typename SubVoid<typename FunctionTraits<decltype(f)>::RetType>::type;
+  
+  template<
+    typename ArgTypes = FunctionTraits<decltype(f)>::ArgTypes
+  , typename Seq = FunctionTraits<decltype(f)>::Sequence
+  > struct InnerInvoke;
+
+  template<typename... Args, size_t... Is>
+  struct InnerInvoke<TypeList<Args...>, std::index_sequence<Is...>> {
+
+    static inline value operator()(decltype(Is, value{})... args) {
+      auto args_tuple = std::make_tuple<Args...>(CamlType<Args>::of_caml(args)...);
+      std::tuple<Args&...> args_tuple_ref(args_tuple);
+      auto result = invoke_seq_void(f, args_tuple_ref, std::index_sequence<Is...>{});
+      auto v_result = CamlType<ResultType>::to_caml(result);
+      return v_result;
+    }
+      
+  };
+
+  static constexpr const auto Caml = InnerInvoke<>();
+};
+
+
+void x(int){};
+
+value y(value yy){
+  return Invoke<x>::Caml(yy);
+}
+
 
 }
 
