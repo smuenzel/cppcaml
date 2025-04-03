@@ -6,6 +6,20 @@
 namespace Cppcaml
 {
 
+void __attribute__((noreturn)) caml_failwith_printf(const char * fmt, ...)
+{
+  int len = 0;
+  va_list args;
+  va_start(args, fmt);
+  len = vsnprintf(NULL, 0, fmt, args);
+  va_end(args);
+  char* buf = (char*)alloca(len+1);
+  va_start(args, fmt);
+  vsnprintf(buf, len+1, fmt, args);
+  va_end(args);
+  caml_failwith(buf);
+}
+
 template<typename T>
 struct always_false : std::false_type {};
 
@@ -105,14 +119,14 @@ struct __attribute__((packed))
 
 template <typename Tuple>
 constexpr auto map_tuple_to_value_array(Tuple&& t) {
-    return std::apply(
-        [](auto&&... elements) {
-            return std::array{
-                (value)(std::forward<decltype(elements)>(elements))...
-                };
-        },
-        std::forward<Tuple>(t)
-    );
+  return std::apply(
+    [](auto&&... elements) {
+      return std::array{
+        (value)(std::forward<decltype(elements)>(elements))...
+        };
+    },
+    std::forward<Tuple>(t)
+  );
 }
 
 template<typename... T>
