@@ -155,6 +155,65 @@ static const StaticCamlArray
 , StaticCamlString<to_array("123456789")>
  > testCamlArray;
 
+template<typename... Ts> struct TypeList;
+
+template<> struct TypeList<> {};
+
+template<typename T, typename... Ts> struct TypeList<T, Ts...> {
+  using Tail = TypeList<Ts...>;
+};
+
+template<size_t N, typename T> struct TypeListElt;
+
+template<size_t N, typename T, typename... Ts>
+struct TypeListElt<N,TypeList<T,Ts...>>
+  : TypeListElt<N-1,TypeList<Ts...>> {};
+
+template<typename T, typename... Ts>
+struct TypeListElt<0,TypeList<T, Ts...>> { using type = T; };
+
+template <size_t N, typename T> using TypeListN =
+  TypeListElt<N,T>::type;
+
+template <template<typename> class F, typename T>
+struct TypeListForAll;
+
+template <template<typename> class F>
+struct TypeListForAll<F, TypeList<>> : std::true_type {};
+
+template <template<typename> class F, typename T, typename... Ts>
+struct TypeListForAll<F, TypeList<T, Ts...>> : std::bool_constant<F<T>::value && TypeListForAll<F, TypeList<Ts...>>::value> {};
+
+// https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
+template<typename F> struct FunctionTraits;
+
+template<typename R, typename Arg0, typename... Args>
+struct FunctionTraits<R(*)(Arg0, Args...)>
+{
+  using Pointer = R(*)(Arg0, Args...);
+  using RetType = R;
+  using ArgTypes = TypeList<Arg0, Args...>;
+  using ArgTypesNoFirst = TypeList<Args...>;
+  static constexpr std::size_t ArgCount = 1 + sizeof...(Args);
+  template<std::size_t N>
+    using NthArg = TypeListN<N,ArgTypes>;
+  using Sequence = std::index_sequence_for<Arg0, Args...>;
+  using SequenceNoFirst = std::index_sequence_for<Args...>;
+};
+
+template<typename C, typename R, typename... Args>
+struct FunctionTraits<R (C::*)(Args...)>
+{
+  using Pointer = R (C::*)(Args...);
+  using RetType = R;
+  using ArgTypes = TypeList<C,Args...>;
+  using ArgTypesNoFirst = TypeList<Args...>;
+  static constexpr std::size_t ArgCount = sizeof...(Args) + 1;
+  template<std::size_t N>
+    using NthArg = TypeListN<N,ArgTypes>;
+  using Sequence = std::index_sequence_for<C,Args...>;
+  using SequenceNoFirst = std::index_sequence_for<Args...>;
+};
 }
 
 #endif

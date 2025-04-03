@@ -8,5 +8,7 @@
    cppcaml/conversion
    cppcaml/container
    cppcaml/values
+   cppcaml/standard
+   cppcaml/invoke
    )
   )

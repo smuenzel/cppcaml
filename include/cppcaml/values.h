@@ -29,7 +29,7 @@ struct CamlCustomValue
     return std::hash<T>()(*((T*) Data_custom_val(v)));
   }
 
-  static constexpr struct custom_operations ops = {
+  static constexpr const struct custom_operations ops = {
     .identifier = typeid(T).name(),
     .finalize = &finalize,
     .compare = &compare,
@@ -59,6 +59,9 @@ struct CamlCustomValue
   }
 
 };
+
+template<typename T>
+struct SharedPtrCustomValue : public CamlCustomValue<std::shared_ptr<T>> {};
 
 }
 

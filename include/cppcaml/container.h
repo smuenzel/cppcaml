@@ -8,18 +8,18 @@
 namespace Cppcaml
 {
 
-template<typename T>
-struct SharedPtrContainer {
-  static constexpr const char* typename_caml = "hello";
+template<typename T, auto name>
+struct CamlTypeSharedPtrContainer {
+  static constexpr const char* typename_caml = name;
+  static constexpr bool to_caml_allocates = true;
+
   using CppType = T*;
   using Representative = std::shared_ptr<T>;
   using Value = std::shared_ptr<T>;
   using ValueExtraParameters = std::tuple<>;
 
-  static constexpr bool to_caml_allocates = true;
-
-  static value to_caml(const std::shared_ptr<T>&) {
-    return 0;
+  static value to_caml(const std::shared_ptr<T>& sp) {
+    return SharedPtrCustomValue(std::move(sp));
   }
 
   static std::shared_ptr<T> to_representative(T* t) {
@@ -30,7 +30,7 @@ struct SharedPtrContainer {
 
 
 template<>
-struct CamlType<int*> : SharedPtrContainer<int> { };
+struct CamlType<int*> : CamlTypeSharedPtrContainer<int, to_array("int_ptr")> { };
 
 static_assert(HasToCaml<int*>);
 
