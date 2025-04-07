@@ -17,7 +17,7 @@
 namespace Cppcaml
 {
 
-void __attribute__((noreturn)) caml_failwith_printf(const char * fmt, ...)
+static void __attribute__((noreturn)) caml_failwith_printf(const char * fmt, ...)
 {
   int len = 0;
   va_list args;
@@ -161,6 +161,7 @@ struct __attribute__((packed))
     map_tuple_to_value_array(array_value_raw);
 };
 
+/*
 StaticCamlValue<1,0> testCamlValue;
 
 static const StaticCamlString<to_array("hello")> testCamlString;
@@ -176,6 +177,7 @@ static const StaticCamlArray
 , StaticCamlString<to_array("12345678")>
 , StaticCamlString<to_array("123456789")>
  > testCamlArray;
+ */
 
 template<typename... Ts> struct TypeList;
 

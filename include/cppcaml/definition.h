@@ -46,8 +46,6 @@ namespace Cppcaml
     return invoke_bytes<func>(argv, argn); \
   }
 
-  void x(int){};
-
 
   namespace XXX
   {

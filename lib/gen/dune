@@ -1,10 +1,11 @@
 (library
   (public_name cppcaml.gen)
   (name cppcaml_gen)
-  (libraries cppcaml_headers)
+  (libraries core cppcaml_headers)
   (foreign_stubs
     (language cxx)
     (names gen_stubs)
     (flags :standard -Wall -O3 -std=c++23 -fconcepts-diagnostics-depth=8)
     )
+  (preprocess (pps ppx_jane))
 )
