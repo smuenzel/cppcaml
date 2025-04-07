@@ -4,12 +4,15 @@
 namespace Cppcaml
 {
 
-  struct CamlFunctionRecord
-    : public StaticCamlValue<0, 1>
+  struct __attribute__((packed, aligned(8))) CamlFunctionRecord
+    : public StaticCamlValue<0, 3>
   {
-    value v_name;
+    const value v_name;
+    const value v_args;
+    const value v_dummy;
   };
   static_assert(CamlFunctionRecord::size == WoSizeC<CamlFunctionRecord>::v);
+  static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 3));
 
 
 #define CPPCAML_WRAP1(name, func) \

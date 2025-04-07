@@ -1,0 +1,4 @@
+(executable
+  (name test_cppcaml)
+  (libraries core cppcaml_test_stubs cppcaml_gen)
+  )

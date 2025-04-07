@@ -3,7 +3,7 @@
   (archive_name cppcaml_test_stubs)
   (names test_stubs)
   (language cxx)
-  (flags :standard -Wall -O3 -std=c++23 -fconcepts-diagnostics-depth=8)
+  (flags :standard -Wall -g -O1 -std=c++23 -fconcepts-diagnostics-depth=8)
   (include_dirs ../include)
   )
 

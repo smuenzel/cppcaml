@@ -9,6 +9,6 @@
 (*$
   let () =
     print_as_comment ()
-*)(* y_function *)
-(* x_function *)
+*)(* ((name y_function) (arguments (int int))) *)
+(* 2 functions *)
 (*$*)

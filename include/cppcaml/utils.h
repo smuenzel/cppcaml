@@ -89,15 +89,32 @@ StaticCamlValueBase
 {
   header_t header;
 
+  StaticCamlValueBase(const StaticCamlValueBase&) = delete;
+
   constexpr StaticCamlValueBase(header_t h) : header(h)
   {
   }
 
+  constexpr const header_t* start_address() const { return &header + 1; }
+
   constexpr explicit operator value() const
   {
-    return reinterpret_cast<value>(&header+1);
+    return reinterpret_cast<value>(this->start_address());
   }
+
 };
+static_assert(sizeof(StaticCamlValueBase) == sizeof(value));
+
+union __attribute__((packed)) ValueUnion
+{
+  const value as_value;
+  const StaticCamlValueBase* as_static_caml_value;
+
+  constexpr ValueUnion(const StaticCamlValueBase* v) : as_static_caml_value(v + 1) {}
+};
+
+static_assert(sizeof(ValueUnion) == sizeof(value));
+
 
 template<typename T>
 // requires std::is_base_of_v<StaticCamlValueBase, T>
@@ -112,7 +129,7 @@ using WoSize = typename WoSizeC<T>::v;
 template<uint8_t p_tag, size_t p_size>
 struct __attribute__((packed))
 StaticCamlValue
-: StaticCamlValueBase
+: public StaticCamlValueBase
 {
   static constexpr const auto tag = p_tag;
   static constexpr const auto size = p_size;
@@ -138,6 +155,39 @@ struct __attribute__((packed))
     padding = {};
 
   const uint8_t final_char = sizeof(value) - (size_no_null % sizeof(value));
+};
+
+
+template<typename... Tvs>
+struct __attribute__((packed))
+  StaticCamlList {};
+
+template<>
+struct __attribute__((packed))
+  StaticCamlList<> {
+    constexpr operator value() const { return Val_emptylist; }
+  };
+
+template<typename Tv0>
+struct __attribute__((packed))
+  StaticCamlList<Tv0> : public StaticCamlValue<0,2> {
+    static constexpr const Tv0 v = {};
+
+    const header_t* head = v.start_address();
+    const value tail = Val_int(0);
+  };
+
+template <typename Tv0, typename Tv1, typename... Tvs>
+struct __attribute__((packed))
+  StaticCamlList<Tv0, Tv1, Tvs...> : public StaticCamlValue<0, 2>
+{
+  static constexpr const Tv0 v = {};
+  static constexpr const StaticCamlList<Tv1, Tvs...> rest = {};
+
+  static constexpr const auto vrest = rest.start_address();
+
+  const header_t* head = v.start_address();
+  const header_t* tail = vrest;
 };
 
 template <typename Tuple>
