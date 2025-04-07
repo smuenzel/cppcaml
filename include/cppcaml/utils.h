@@ -1,7 +1,18 @@
 #if !defined(_CPPCAML_UTILS_H_)
 #define _CPPCAML_UTILS_H_
 
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+
 #include <array>
+#include <algorithm>
+#include <tuple>
+#include <functional>
+
+#include <caml/mlvalues.h>
+#include <caml/alloc.h>
+#include <caml/fail.h>
 
 namespace Cppcaml
 {
@@ -88,12 +99,23 @@ StaticCamlValueBase
   }
 };
 
+template<typename T>
+// requires std::is_base_of_v<StaticCamlValueBase, T>
+struct WoSizeC 
+{
+  static const constexpr size_t v = (sizeof(T) - sizeof(StaticCamlValueBase))/sizeof(value);
+};
 
-template<uint8_t tag, size_t size>
+template<typename T>
+using WoSize = typename WoSizeC<T>::v;
+
+template<uint8_t p_tag, size_t p_size>
 struct __attribute__((packed))
 StaticCamlValue
 : StaticCamlValueBase
 {
+  static constexpr const auto tag = p_tag;
+  static constexpr const auto size = p_size;
   constexpr StaticCamlValue() : StaticCamlValueBase(Caml_out_of_heap_header(size, tag)) {}
 
 };

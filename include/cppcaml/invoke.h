@@ -68,17 +68,32 @@ struct Invoke
       auto v_result = CamlType<ResultType>::to_caml(result);
       return v_result;
     }
-      
   };
 
   static constexpr const auto Caml = InnerInvoke<>();
 };
 
+template<
+  auto f
+, typename Seq = FunctionTraits<decltype(decltype(f)::operator())>::Sequence
+> struct
+InvokeBytes;
 
-void x(int){};
+template<
+  auto f
+, size_t... Is
+>
+struct InvokeBytes<f, std::index_sequence<Is...>>
+{
+  static value invoke(value *argv, int argn) {
+    return f(argv[Is]...);
+  }
+};
 
-value y(value yy){
-  return Invoke<x>::Caml(yy);
+template<auto f>
+CAMLprim value invoke_bytes(value *argv, int argn)
+{
+  return InvokeBytes<f>::invoke(argv, argn);
 }
 
 

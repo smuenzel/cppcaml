@@ -5,3 +5,5 @@
 #include <cppcaml/container.h>
 #include <cppcaml/standard.h>
 #include <cppcaml/invoke.h>
+#include <cppcaml/definition.h>
+

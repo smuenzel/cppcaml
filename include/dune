@@ -10,5 +10,6 @@
    cppcaml/values
    cppcaml/standard
    cppcaml/invoke
+   cppcaml/definition
    )
   )
