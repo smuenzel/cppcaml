@@ -2,6 +2,7 @@ open! Core
 
 type function_record =
   { name : string
+  ; cpp_name : string
   ; arguments : string list
   ; return : string
   } [@@deriving sexp]
@@ -21,12 +22,12 @@ let print_as_comment () =
 
 let print_externals () =
   printf "\n";
-  let f { name; arguments; return } =
+  let f { name; cpp_name; arguments; return; } =
     printf !"external %s : %s -> %s = \"%s\"\n"
       name
       (String.concat ~sep:" -> " arguments)
       return
-      name
+      cpp_name
   in
   let count = iter_functions f in
   printf !"(* %d functions *)\n" count

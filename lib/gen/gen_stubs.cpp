@@ -10,7 +10,6 @@ extern "C" CAMLprim value cppcaml_iter_functions(value v_callback)
 {
   extern CamlFunctionRecord __start_cppcaml_info_function;
   extern CamlFunctionRecord __stop_cppcaml_info_function;
-  static_assert(sizeof(CamlFunctionRecord) == (1 + 3) * sizeof(value));
   CAMLparam1(v_callback);
   CAMLlocalresult(v_result);
   size_t count = ((uint8_t*)&__stop_cppcaml_info_function - (uint8_t*)&__start_cppcaml_info_function) / sizeof(CamlFunctionRecord);

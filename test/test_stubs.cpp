@@ -62,10 +62,12 @@ extern "C" CAMLprim value caml_test_unit(value){
   return Val_unit;
 }
 
+/*
 namespace XXX
 {
   using Definition = Cppcaml::OcamlFunctionDefinition<std::to_array("my_function"), x>;
   CPPCAML_WRAPN(cppwrap_my_function, Definition::invoker, 5)
 }
+*/
 
-
+DEF_CPPCAML(my_function, x, 5)

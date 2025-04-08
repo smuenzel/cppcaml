@@ -4,15 +4,17 @@
 namespace Cppcaml
 {
 
-  struct __attribute__((packed, aligned(8))) CamlFunctionRecord
-    : public StaticCamlValue<0, 3>
+  struct __attribute__((packed, aligned(1))) CamlFunctionRecord
+    : public StaticCamlValue<0, 4>
   {
     const value v_name;
+    const value v_cppname;
     const value v_args;
     const value v_return;
   };
   static_assert(CamlFunctionRecord::size == WoSizeC<CamlFunctionRecord>::v);
-  static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 3));
+  static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 4));
+  static_assert(alignof(CamlFunctionRecord) == 1);
 
 
 #define CPPCAML_WRAP1(name, func) \
@@ -73,7 +75,10 @@ namespace Cppcaml
     static const constexpr auto& invoker = Invoker::Caml;
 
     static const constexpr auto static_function_name =
-      Cppcaml::StaticCamlString<ocaml_function_name>();
+      StaticCamlString<ocaml_function_name>();
+
+    static const constexpr auto cpp_function_name =
+      StaticCamlString<cat(to_array("ccwrap__"), ocaml_function_name)>();
 
     using ArgTypes = OcamlTypenames<typename Invoker::ArgTypes>;
     static constexpr auto return_type = StaticCamlString<CamlType<typename Invoker::ResultType>::typename_caml>();
@@ -82,6 +87,7 @@ namespace Cppcaml
       __attribute__((used,retain,section("cppcaml_info_function")))
       =
       { .v_name = (value)static_function_name,
+        .v_cppname = (value)cpp_function_name,
         .v_args = (value)ArgTypes::args,
         .v_return = (value)return_type,
       };
@@ -92,5 +98,13 @@ namespace Cppcaml
     return v;
   }
 }
+
+#define DEF_CPPCAML(name, f, N, ...) \
+  namespace Cppcaml::UserDefinitions::name { \
+    using namespace Cppcaml; \
+    using std::to_array; \
+    using Definition = OcamlFunctionDefinition<to_array(#name), f, ## __VA_ARGS__>; \
+    CPPCAML_WRAPN(ccwrap__##name, Definition::invoker, N); \
+  }
 
 #endif
