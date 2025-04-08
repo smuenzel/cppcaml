@@ -12,7 +12,6 @@
   (modules)
   (foreign_archives
     cppcaml_test_stubs
-    ../lib/apiinfo/cppcaml_apiinfo
   )
   (modes native)
   (libraries cppcaml_headers)
