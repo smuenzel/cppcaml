@@ -12,7 +12,7 @@ struct Void {};
 
 template<>
 struct CamlType<Void>{
-  static const constexpr char* typename_caml = "unit";
+  static const constexpr auto typename_caml = to_array("unit");
   static const constexpr bool to_caml_allocates = false;
   using CppType = Void;
   using Representative = Void;
@@ -34,7 +34,7 @@ static_assert(BidirectionalCaml<Void>);
 
 template<>
 struct CamlType<const char*>{
-  static const constexpr char* typename_caml = "string";
+  static const constexpr auto typename_caml = to_array("string");
   static const constexpr bool to_caml_allocates = true;
   using CppType = const char*;
   using Representative = const char*;
@@ -56,7 +56,7 @@ static_assert(BidirectionalCaml<const char*>);
 
 template<>
 struct CamlType<int64_t>{
-  static const constexpr char* typename_caml = "int64";
+  static const constexpr auto typename_caml = to_array("int64");
   static const constexpr bool to_caml_allocates = true;
   using CppType = int64_t;
   using Representative = int64_t;
@@ -78,7 +78,7 @@ static_assert(BidirectionalCaml<int64_t>);
 
 template<typename T, auto name>
 struct SimpleCamlTypeBase {
-  static const constexpr char* typename_caml = name;
+  static const constexpr auto typename_caml = name;
   static const constexpr bool to_caml_allocates = false;
   using CppType = T;
   using Representative = T;

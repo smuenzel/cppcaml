@@ -10,7 +10,7 @@ namespace Cppcaml
 
 template<typename T, auto name>
 struct CamlTypeSharedPtrContainer {
-  static constexpr const char* typename_caml = name;
+  static constexpr const auto typename_caml = name;
   static constexpr bool to_caml_allocates = true;
 
   using CppType = T*;

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <tuple>
 #include <functional>
+#include <span>
 
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
@@ -142,19 +143,40 @@ constexpr size_t caml_string_wosize(size_t len)
   return (len + sizeof(value))/sizeof(value);
 }
 
+template<size_t tail_length, uint8_t offset_value>
+struct __attribute__((packed))
+  StaticCamlStringTail
+{
+  const std::array<uint8_t, tail_length - 1>
+    padding = {};
+
+  const uint8_t final_char = offset_value;
+};
+
+template<uint8_t offset_value>
+struct __attribute__((packed))
+  StaticCamlStringTail<1, offset_value> {
+  const uint8_t final_char = offset_value;
+  };
+
+template<>
+struct __attribute__((packed))
+  StaticCamlStringTail<0, 0> {
+  };
+
 template<auto s>
 struct __attribute__((packed))
   StaticCamlString : StaticCamlValue<String_tag, caml_string_wosize(s.size() - 1)>
 {
-  static constexpr auto size_no_null = s.size() - 0;
+  static constexpr auto size_no_null = s.size() - 1;
   static constexpr auto wosize = caml_string_wosize(size_no_null);
+  static constexpr auto offset_index = Bsize_wsize(wosize) - 1;
+  static constexpr auto offset_value = offset_index - size_no_null;
+  static constexpr auto tail_length = Bsize_wsize(wosize) - size_no_null - 1;
 
   const std::array<char, s.size()> string_value = to_array(s);
 
-  const std::array<uint8_t, wosize * sizeof(value) - size_no_null - 1>
-    padding = {};
-
-  const uint8_t final_char = sizeof(value) - (size_no_null % sizeof(value));
+  const StaticCamlStringTail<tail_length, offset_value> tail = {};
 };
 
 
@@ -211,24 +233,6 @@ struct __attribute__((packed))
     map_tuple_to_value_array(array_value_raw);
 };
 
-/*
-StaticCamlValue<1,0> testCamlValue;
-
-static const StaticCamlString<to_array("hello")> testCamlString;
-
-static const StaticCamlArray
-< StaticCamlString<to_array("1")>
-, StaticCamlString<to_array("12")>
-, StaticCamlString<to_array("123")>
-, StaticCamlString<to_array("1234")>
-, StaticCamlString<to_array("12345")>
-, StaticCamlString<to_array("123456")>
-, StaticCamlString<to_array("1234567")>
-, StaticCamlString<to_array("12345678")>
-, StaticCamlString<to_array("123456789")>
- > testCamlArray;
- */
-
 template<typename... Ts> struct TypeList;
 
 template<> struct TypeList<> {};
@@ -257,6 +261,22 @@ struct TypeListForAll<F, TypeList<>> : std::true_type {};
 
 template <template<typename> class F, typename T, typename... Ts>
 struct TypeListForAll<F, TypeList<T, Ts...>> : std::bool_constant<F<T>::value && TypeListForAll<F, TypeList<Ts...>>::value> {};
+
+template <template<typename> class F, typename T>
+struct TypeListMap;
+
+template <template<typename> class F, typename... Ts>
+struct TypeListMap<F, TypeList<Ts...>> {
+  using type = TypeList<typename F<Ts>::type...>;
+};
+
+template <auto f, typename T>
+struct TypeListMapToTuple;
+
+template <auto f, typename... Ts>
+struct TypeListMapToTuple<f, TypeList<Ts...>> {
+  using type = std::tuple<decltype(f(std::declval<Ts>()))...>;
+};
 
 // https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
 template<typename F> struct FunctionTraits;

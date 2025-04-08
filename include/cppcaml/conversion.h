@@ -31,7 +31,7 @@ concept HasCamlConversion = requires {
   typename CamlType<T>::CppType;
   requires std::same_as<typename CamlType<T>::CppType, T>;
   requires Specializes<typename CamlType<T>::ValueExtraParameters, std::tuple>;
-  { CamlType<T>::typename_caml } -> std::convertible_to<const char*>;
+  { CamlType<T>::typename_caml.data() } -> std::convertible_to<const char*>;
 };
 
 template<typename T>

@@ -9,7 +9,7 @@ namespace Cppcaml
   {
     const value v_name;
     const value v_args;
-    const value v_dummy;
+    const value v_return;
   };
   static_assert(CamlFunctionRecord::size == WoSizeC<CamlFunctionRecord>::v);
   static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 3));
@@ -49,34 +49,43 @@ namespace Cppcaml
     return invoke_bytes<func>(argv, argn); \
   }
 
+#define CPPCAML_WRAPN(name, func, N) \
+  CPPCAML_WRAP##N(name, func)
 
-  namespace XXX
+
+  template <typename F>
+    struct OcamlTypenames;
+
+  template <typename... Args>
+    struct OcamlTypenames<TypeList<Args...>> {
+      static constexpr auto args = StaticCamlList<StaticCamlString<CamlType<Args>::typename_caml>...>();
+      constexpr operator value() const { return (value)args; }
+    };
+
+
+  template<
+    auto ocaml_function_name,
+    auto f,
+    auto... Properties
+  > struct OcamlFunctionDefinition
   {
-    /*
-    const constexpr auto& x = Invoke<x>::Caml;
+    using Invoker = Invoke<f, Properties...>;
+    static const constexpr auto& invoker = Invoker::Caml;
 
-    extern "C" value y(value yy){
-      return x(yy);
-    }
+    static const constexpr auto static_function_name =
+      Cppcaml::StaticCamlString<ocaml_function_name>();
 
-    static const constexpr auto name = StaticCamlString<to_array("x")>();
+    using ArgTypes = OcamlTypenames<typename Invoker::ArgTypes>;
+    static constexpr auto return_type = StaticCamlString<CamlType<typename Invoker::ResultType>::typename_caml>();
 
-    static const constexpr CamlFunctionRecord info
+    static const constexpr Cppcaml::CamlFunctionRecord info
       __attribute__((used,retain,section("cppcaml_info_function")))
       =
-    { .v_name = (value)name,
-    };
-
-    static const constexpr auto name2 = StaticCamlString<to_array("x2")>();
-    static const constexpr CamlFunctionRecord info2
-      __attribute__((used,retain,section("cppcaml_info_function")))
-      =
-    { .v_name = (value)name2,
-    };
-    */
-  }
-
-
+      { .v_name = (value)static_function_name,
+        .v_args = (value)ArgTypes::args,
+        .v_return = (value)return_type,
+      };
+  };
 
 }
 

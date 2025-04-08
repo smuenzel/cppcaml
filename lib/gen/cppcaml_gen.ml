@@ -13,6 +13,7 @@ external function_record : function_record = "__start_cppcaml_info_function"
    *)
 
 let print_as_comment () =
+  printf "\n";
   let count =
     iter_functions (printf !"(* %{sexp:function_record} *)\n")
   in

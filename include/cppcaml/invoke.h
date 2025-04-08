@@ -52,6 +52,7 @@ requires FunctionConvertible<decltype(f)>
 struct Invoke
 {
   using ResultType = typename SubVoid<typename FunctionTraits<decltype(f)>::RetType>::type;
+  using ArgTypes = typename FunctionTraits<decltype(f)>::ArgTypes;
   
   template<
     typename ArgTypes = FunctionTraits<decltype(f)>::ArgTypes
