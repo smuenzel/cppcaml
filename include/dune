@@ -1,0 +1,15 @@
+(library
+  (public_name cppcaml.headers)
+  (name        cppcaml_headers)
+  (install_c_headers
+   cppcaml
+   cppcaml2
+   cppcaml/utils
+   cppcaml/conversion
+   cppcaml/container
+   cppcaml/values
+   cppcaml/standard
+   cppcaml/invoke
+   cppcaml/definition
+   )
+  )
