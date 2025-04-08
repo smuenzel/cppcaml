@@ -22,6 +22,7 @@
 (cinaps
   (files test_ocaml.ml)
   (libraries core cppcaml_test_stubs cppcaml_gen)
+  (link_flags :standard -linkall)
   )
 
 (library

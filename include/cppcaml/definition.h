@@ -87,6 +87,10 @@ namespace Cppcaml
       };
   };
 
+  extern "C" __attribute__((weak)) value cppcaml_retain_function(value v)
+  {
+    return v;
+  }
 }
 
 #endif
