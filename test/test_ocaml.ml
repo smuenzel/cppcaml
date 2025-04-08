@@ -19,6 +19,9 @@
   let () =
     print_externals ()
 *)
-external my_function : int -> int -> string -> uint8 -> int64 -> unit = "ccwrap__my_function"
+external my_function
+  : int -> int -> string -> uint8 -> int64 -> unit
+  = "ccwrap__my_function"
+
 (* 1 functions *)
 (*$*)

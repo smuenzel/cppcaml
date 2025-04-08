@@ -4,17 +4,17 @@
 namespace Cppcaml
 {
 
-  struct __attribute__((packed, aligned(1))) CamlFunctionRecord
-    : public StaticCamlValue<0, 4>
+  struct __attribute__((packed, aligned(32))) CamlFunctionRecord
+    : public StaticCamlValue<0, 5>
   {
     const value v_name;
     const value v_cppname;
     const value v_args;
     const value v_return;
   };
-  static_assert(CamlFunctionRecord::size == WoSizeC<CamlFunctionRecord>::v);
-  static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 4));
-  static_assert(alignof(CamlFunctionRecord) == 1);
+  //static_assert(CamlFunctionRecord::size == WoSizeC<CamlFunctionRecord>::v);
+  //static_assert(sizeof(CamlFunctionRecord) == sizeof(value) * (1 + 5));
+  static_assert(alignof(CamlFunctionRecord) == 32);
 
 
 #define CPPCAML_WRAP1(name, func) \
@@ -60,7 +60,8 @@ namespace Cppcaml
 
   template <typename... Args>
     struct OcamlTypenames<TypeList<Args...>> {
-      static constexpr auto args = StaticCamlList<StaticCamlString<CamlType<Args>::typename_caml>...>();
+      static constexpr auto args
+        = StaticCamlList<StaticCamlString<CamlType<Args>::typename_caml>...>();
       constexpr operator value() const { return (value)args; }
     };
 

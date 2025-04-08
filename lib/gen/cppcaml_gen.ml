@@ -23,7 +23,7 @@ let print_as_comment () =
 let print_externals () =
   printf "\n";
   let f { name; cpp_name; arguments; return; } =
-    printf !"external %s : %s -> %s = \"%s\"\n"
+    printf !"external %s\n  : %s -> %s\n  = \"%s\"\n\n"
       name
       (String.concat ~sep:" -> " arguments)
       return

@@ -12,8 +12,8 @@ extern "C" CAMLprim value cppcaml_iter_functions(value v_callback)
   extern CamlFunctionRecord __stop_cppcaml_info_function;
   CAMLparam1(v_callback);
   CAMLlocalresult(v_result);
-  size_t count = ((uint8_t*)&__stop_cppcaml_info_function - (uint8_t*)&__start_cppcaml_info_function) / sizeof(CamlFunctionRecord);
-  for(size_t i = 0; i< count; i++)
+  ssize_t count = ((uint8_t*)&__stop_cppcaml_info_function - (uint8_t*)&__start_cppcaml_info_function) / sizeof(CamlFunctionRecord);
+  for(ssize_t i = count - 1; i >= 0; i--)
   {
     CamlFunctionRecord& record = (&__start_cppcaml_info_function)[i];
     v_result = caml_callback_res(v_callback, (value)record);
