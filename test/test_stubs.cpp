@@ -1,5 +1,5 @@
 
-#include <cppcaml2.h>
+#include <cppcaml.h>
 
 struct my_rc {
   int count;

@@ -2,7 +2,7 @@
 #include <caml/mlvalues.h>
 #include <caml/callback.h>
 
-#include <cppcaml2.h>
+#include <cppcaml.h>
 
 using namespace Cppcaml;
 
