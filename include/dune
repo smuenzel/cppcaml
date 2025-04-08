@@ -1,14 +1,9 @@
 (library
   (public_name cppcaml.headers)
   (name        cppcaml_headers)
-  (install_c_headers
-   cppcaml
-   cppcaml/utils
-   cppcaml/conversion
-   cppcaml/container
-   cppcaml/values
-   cppcaml/standard
-   cppcaml/invoke
-   cppcaml/definition
-   )
+  (public_headers
+    cppcaml.h
+    (glob_files "cppcaml/*.h")
+    (glob_files "fix8/*.hpp")
+    )
   )

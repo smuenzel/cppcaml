@@ -1,4 +1,6 @@
 
+type uint8 = int
+
 (*$ open! Core
   open Cppcaml_gen
   (* dune cinaps currently doesn't support adding link flags, and we need -linkall,

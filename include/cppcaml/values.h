@@ -3,6 +3,9 @@
 
 #include <memory>
 
+#include <fix8/conjure_enum.hpp>
+#include <fix8/conjure_type.hpp>
+
 #include <caml/custom.h>
 
 #include <cppcaml/utils.h>
@@ -30,7 +33,7 @@ struct CamlCustomValue
   }
 
   static constexpr const struct custom_operations ops = {
-    .identifier = "custom" /* typeid(T).name() */,
+    .identifier = FIX8::conjure_type<T>::name.c_str(),
     .finalize = &finalize,
     .compare = &compare,
     .hash = &hash,
