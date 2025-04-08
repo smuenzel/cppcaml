@@ -10,6 +10,8 @@
 #include <tuple>
 #include <functional>
 #include <span>
+#include <string>
+#include <string_view>
 
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
@@ -54,6 +56,17 @@ constexpr auto cat(const std::array<char,Len>&...strings){
 
 using std::to_array;
 
+template<size_t N, size_t... I>
+const constexpr std::array<char, N + 1> make_string_view_array_internal(const std::string_view& view, const std::index_sequence<I...>&) {
+  return std::array<char, N + 1>{ view[I]..., 0 };
+};
+
+template<size_t N>
+const constexpr std::array<char, N + 1> make_string_view_array(std::string_view view) {
+  const constexpr auto seq = std::make_index_sequence<N>();
+  return make_string_view_array_internal<N>(view, seq);
+}
+
 template<typename T, size_t L>
 constexpr const std::array<T,L>& to_array(const std::array<T,L>& a) { return a; }
 
@@ -78,6 +91,17 @@ constexpr auto map_array(const std::array<T, N>& arr, F&& f) {
     }(std::make_index_sequence<N>());
 }
 
+template<typename T0, typename T1, std::size_t N, typename F>
+constexpr auto map2_array(const std::array<T0, N>& arr0, const std::array<T1, N>& arr1, F&& f) {
+    using result_type = std::array<
+        std::remove_cvref_t<std::invoke_result_t<F&, const T0&, const T1&>>,
+        N
+    >;
+    return [&]<std::size_t... I>(std::index_sequence<I...>) {
+        return result_type{ f(arr0[I], arr1[I])... };
+    }(std::make_index_sequence<N>());
+}
+
 template<auto s> struct StaticString {
   static constexpr const auto va = s;
   static constexpr auto value_len = va.size();
@@ -90,7 +114,9 @@ StaticCamlValueBase
 {
   header_t header;
 
+  /*
   StaticCamlValueBase(const StaticCamlValueBase&) = delete;
+  */
 
   constexpr StaticCamlValueBase(header_t h) : header(h)
   {
@@ -166,7 +192,7 @@ struct __attribute__((packed))
 
 template<auto s>
 struct __attribute__((packed))
-  StaticCamlString : StaticCamlValue<String_tag, caml_string_wosize(s.size() - 1)>
+  StaticCamlString : public StaticCamlValue<String_tag, caml_string_wosize(s.size() - 1)>
 {
   static constexpr auto size_no_null = s.size() - 1;
   static constexpr auto wosize = caml_string_wosize(size_no_null);
@@ -224,13 +250,40 @@ constexpr auto map_tuple_to_value_array(Tuple&& t) {
   );
 }
 
-template<typename... T>
+/*
+template<size_t N>
 struct __attribute__((packed))
-  StaticCamlArray : StaticCamlValue<0, sizeof...(T)>
+  StaticCamlArray : StaticCamlValue<0, N>
 {
+  const std::array<value, N> values;
+};
+*/
+
+template<typename... T>
+ struct __attribute__((packed))
+  StaticCamlArray : StaticCamlValue<0, sizeof...(T)>
+ {
   static const constexpr std::tuple<T...> array_value_raw = {};
   const std::array<value, sizeof...(T)> array_value =
     map_tuple_to_value_array(array_value_raw);
+ };
+
+/*
+template<auto t>
+ struct __attribute__((packed))
+  StaticCamlArrayDirect : StaticCamlValue<0, std::tuple_size_v<decltype(t)>>
+ {
+  static const constexpr auto array_value_raw = t;
+  const std::array<value, std::tuple_size_v<decltype(t)>> array_value =
+    map_tuple_to_value_array(array_value_raw);
+ };
+ */
+
+template<size_t N>
+struct __attribute__((packed))
+  StaticCamlArrayDirect : StaticCamlValue<0, N>
+{
+  const std::array<value, N> values;
 };
 
 template<typename... Ts> struct TypeList;

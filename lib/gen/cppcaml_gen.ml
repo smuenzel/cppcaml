@@ -7,8 +7,20 @@ type function_record =
   ; return : string
   } [@@deriving sexp]
 
+type enum_entry =
+  { name : string
+  ; value : string
+  } [@@deriving sexp]
+
+type enum_record =
+  { name : string
+  ; cpp_name : string
+  ; is_bitflag : bool
+  ; entries : enum_entry array
+  } [@@deriving sexp]
 
 external iter_functions : (function_record -> unit) -> int = "cppcaml_iter_functions"
+external iter_enums : (enum_record -> unit) -> int = "cppcaml_iter_enums"
 
 external function_record : unit -> function_record = "__start_cppcaml_info_function"
 
@@ -31,3 +43,10 @@ let print_externals () =
   in
   let count = iter_functions f in
   printf !"(* %d functions *)\n" count
+
+let enum_print_as_comment () =
+  printf "\n";
+  let count =
+    iter_enums (printf !"(* %{sexp:enum_record} *)\n")
+  in
+  printf !"(* %d enums *)\n" count

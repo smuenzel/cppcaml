@@ -21,3 +21,19 @@ extern "C" CAMLprim value cppcaml_iter_functions(value v_callback)
   }
   CAMLreturn(Val_int(count));
 }
+
+extern "C" CAMLprim value cppcaml_iter_enums(value v_callback)
+{
+  extern CamlFunctionRecord __start_cppcaml_info_enum;
+  extern CamlFunctionRecord __stop_cppcaml_info_enum;
+  CAMLparam1(v_callback);
+  CAMLlocalresult(v_result);
+  ssize_t count = ((uint8_t*)&__stop_cppcaml_info_enum - (uint8_t*)&__start_cppcaml_info_enum) / sizeof(CamlFunctionRecord);
+  for(ssize_t i = count - 1; i >= 0; i--)
+  {
+    CamlFunctionRecord& record = (&__start_cppcaml_info_enum)[i];
+    v_result = caml_callback_res(v_callback, (value)record);
+    (void)caml_get_value_or_raise(v_result);
+  }
+  CAMLreturn(Val_int(count));
+}
