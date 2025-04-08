@@ -9,7 +9,7 @@ type function_record =
 
 type enum_entry =
   { name : string
-  ; value : string
+  ; value : int
   } [@@deriving sexp]
 
 type enum_record =
@@ -47,6 +47,10 @@ let print_externals () =
 let enum_print_as_comment () =
   printf "\n";
   let count =
-    iter_enums (printf !"(* %{sexp:enum_record} *)\n")
+    iter_enums
+      (*
+      (fun { cpp_name; entries; _ } -> printf "(* %s (%i) %s *)\n" cpp_name (Array.length entries) (entries.(2).name))
+        *)
+      (printf !"(* %{sexp:enum_record} *)\n")
   in
   printf !"(* %d enums *)\n" count

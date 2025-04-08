@@ -155,7 +155,7 @@ namespace Cppcaml
     template<size_t... I>
       static const constexpr auto make_value_entries(std::index_sequence<I...> seq)
       {
-        return std::array<value, count>{(value)std::get<I>(scs_names)...};
+        return std::array<value, count>{(value)std::get<I>(entries)...};
       }
 
     static const constexpr auto v_entries = make_value_entries(seq);
