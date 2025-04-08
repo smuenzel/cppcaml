@@ -50,7 +50,7 @@ template<typename T>
 concept HasOfCaml =
   HasCamlConversion<T>
   && requires(value v) {
-    { CamlType<T>::of_caml(v) } -> std::same_as<typename CamlType<T>::Representative>;
+    { CamlType<T>::of_caml(v) } -> std::same_as<typename CamlType<T>::CppType>;
   }
 ;
 

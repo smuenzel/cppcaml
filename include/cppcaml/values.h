@@ -30,13 +30,13 @@ struct CamlCustomValue
   }
 
   static constexpr const struct custom_operations ops = {
-    .identifier = typeid(T).name(),
+    .identifier = "custom" /* typeid(T).name() */,
     .finalize = &finalize,
     .compare = &compare,
-    .compare_ext = custom_compare_ext_default,
     .hash = &hash,
     .serialize = custom_serialize_default,
     .deserialize = custom_deserialize_default,
+    .compare_ext = custom_compare_ext_default,
     .fixed_length = 0,
   };
 
@@ -49,7 +49,7 @@ struct CamlCustomValue
     return v;
   }
 
-  T& from_value(value v) {
+  static T& from_value(value v) {
     auto custom_ops_from_v = Custom_ops_val(v);
     if(custom_ops_from_v != &ops) {
       caml_failwith_printf("Cannot convert %s to %s",

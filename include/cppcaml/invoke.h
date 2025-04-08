@@ -66,7 +66,8 @@ struct Invoke
       auto args_tuple = std::make_tuple<Args...>(CamlType<Args>::of_caml(args)...);
       std::tuple<Args&...> args_tuple_ref(args_tuple);
       auto result = invoke_seq_void(f, args_tuple_ref, std::index_sequence<Is...>{});
-      auto v_result = CamlType<ResultType>::to_caml(result);
+      auto r_result = CamlType<ResultType>::to_representative(result);
+      auto v_result = CamlType<ResultType>::to_caml(r_result);
       return v_result;
     }
   };

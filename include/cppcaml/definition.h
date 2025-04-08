@@ -100,10 +100,10 @@ namespace Cppcaml
 }
 
 #define DEF_CPPCAML(name, f, N, ...) \
-  namespace Cppcaml::UserDefinitions::name { \
+  namespace Cppcaml::UserDefinitions::Def_##name { \
     using namespace Cppcaml; \
     using std::to_array; \
-    using Definition = OcamlFunctionDefinition<to_array(#name), f, ## __VA_ARGS__>; \
+    using Definition = OcamlFunctionDefinition<to_array(#name), &f>; \
     CPPCAML_WRAPN(ccwrap__##name, Definition::invoker, N); \
   }
 

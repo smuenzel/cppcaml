@@ -288,6 +288,7 @@ struct FunctionTraits<R(*)(Arg0, Args...)>
   using RetType = R;
   using ArgTypes = TypeList<Arg0, Args...>;
   using ArgTypesNoFirst = TypeList<Args...>;
+  using ArgTypesFirst = Arg0;
   static constexpr std::size_t ArgCount = 1 + sizeof...(Args);
   template<std::size_t N>
     using NthArg = TypeListN<N,ArgTypes>;
@@ -302,6 +303,7 @@ struct FunctionTraits<R (C::*)(Args...)>
   using RetType = R;
   using ArgTypes = TypeList<C,Args...>;
   using ArgTypesNoFirst = TypeList<Args...>;
+  using ArgTypesFirst = C; // CR smuenzel: should this be a pointer?
   static constexpr std::size_t ArgCount = sizeof...(Args) + 1;
   template<std::size_t N>
     using NthArg = TypeListN<N,ArgTypes>;
