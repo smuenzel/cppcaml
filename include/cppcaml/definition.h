@@ -107,4 +107,6 @@ namespace Cppcaml
     CPPCAML_WRAPN(ccwrap__##name, Definition::invoker, N); \
   }
 
+#define DEF_CPPCAML_S(name, N, ...) DEF_CPPCAML(name, name, N, ## __VA_ARGS__)
+
 #endif
