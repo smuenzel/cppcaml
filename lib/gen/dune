@@ -1,7 +1,7 @@
 (library
   (public_name cppcaml.gen)
   (name cppcaml_gen)
-  (libraries core cppcaml_headers)
+  (libraries core capitalization cppcaml_headers)
   (foreign_stubs
     (language cxx)
     (names gen_stubs)

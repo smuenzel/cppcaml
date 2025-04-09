@@ -113,6 +113,7 @@ namespace Cppcaml
   };
 
 
+  // CR smuenzel: there are a lot of intermediate values here that could maybe be eliminated
   template<typename E>
     struct CamlEnumDefinition
   {
