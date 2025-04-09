@@ -144,6 +144,16 @@ struct CamlType<bool> : public SimpleCamlTypeBase<bool, to_array("bool")>
 };
 static_assert(BidirectionalCaml<bool>);
 
+template<typename E>
+requires (std::is_enum_v<E>  && sizeof(E) < sizeof(value))
+struct CamlType<E>
+  : public IntableCamlType
+    < E
+    , make_string_view_array<FIX8::conjure_type<E>::name.size() - 1>(FIX8::conjure_type<E>::name)
+    >
+{
+};
+
 }
 
 #endif

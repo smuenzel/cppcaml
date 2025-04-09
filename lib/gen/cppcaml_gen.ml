@@ -92,6 +92,7 @@ let enum_entry_name ~module_name ~(entry : enum_entry) =
 
 let print_enum (er : enum_record) =
   let module_name = Casify.make er.name Capitalized_snake_case in
+  let simple_type_name = Casify.make er.name Snake_case in
   printf "\n";
   printf "module %s : sig\n" module_name;
   printf "  type t [@@immediate]\n\n";
@@ -109,7 +110,8 @@ let print_enum (er : enum_record) =
       let oname = enum_entry_name ~module_name ~entry in
       printf "  let %s = %i\n" oname entry.value;
     );
-  printf "end\n";
+  printf "end\n\n";
+  printf "type %s = %s.t\n\n" simple_type_name module_name;
   ()
 
 let print_enums () =
