@@ -174,15 +174,6 @@ namespace Cppcaml
 
   };
 
-  enum X
-  {
-    Axx,
-    B,
-    C,
-  };
-
-  struct Y : public CamlEnumDefinition<X> {};
-
   extern "C" __attribute__((weak)) value cppcaml_retain_function(value v)
   {
     return v;
@@ -198,5 +189,12 @@ namespace Cppcaml
   }
 
 #define DEF_CPPCAML_S(name, N, ...) DEF_CPPCAML(name, name, N, ## __VA_ARGS__)
+
+#define DEF_CPPCAML_ENUM(name) \
+  namespace Cppcaml::UserDefinitions::Enum_##name { \
+    using namespace Cppcaml; \
+    using Definition = CamlEnumDefinition<name>; \
+    static const constexpr auto& info = Definition::info; \
+  }
 
 #endif
