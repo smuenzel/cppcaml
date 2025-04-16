@@ -1,0 +1,3 @@
+[submodule "vendor/conjure_enum"]
+	path = vendor/conjure_enum
+	url = git@github.com:fix8mt/conjure_enum.git
