@@ -17,6 +17,8 @@
 #include <caml/alloc.h>
 #include <caml/fail.h>
 
+#include <cppcaml/typelist.h>
+
 namespace Cppcaml
 {
 
@@ -286,85 +288,6 @@ struct __attribute__((packed))
   const std::array<value, N> values;
 };
 
-template<typename... Ts> struct TypeList;
-
-template<> struct TypeList<> {
-  static constexpr const size_t size = 0;
-};
-
-template<typename T, typename... Ts> struct TypeList<T, Ts...> {
-  using Tail = TypeList<Ts...>;
-  static constexpr const size_t size = 1 + Tail::size;
-};
-
-template<size_t N, typename T> struct TypeListElt;
-
-template<size_t N, typename T, typename... Ts>
-struct TypeListElt<N,TypeList<T,Ts...>>
-  : TypeListElt<N-1,TypeList<Ts...>> {};
-
-template<typename T, typename... Ts>
-struct TypeListElt<0,TypeList<T, Ts...>> { using type = T; };
-
-template <size_t N, typename T> using TypeListN =
-  TypeListElt<N,T>::type;
-
-template <template<typename> class F, typename T>
-struct TypeListForAll;
-
-template <template<typename> class F>
-struct TypeListForAll<F, TypeList<>> : std::true_type {};
-
-template <template<typename> class F, typename T, typename... Ts>
-struct TypeListForAll<F, TypeList<T, Ts...>> : std::bool_constant<F<T>::value && TypeListForAll<F, TypeList<Ts...>>::value> {};
-
-template <template<typename> class F, typename T>
-struct TypeListMap;
-
-template <template<typename> class F, typename... Ts>
-struct TypeListMap<F, TypeList<Ts...>> {
-  using type = TypeList<typename F<Ts>::type...>;
-};
-
-template <auto f, typename T>
-struct TypeListMapToTuple;
-
-template <auto f, typename... Ts>
-struct TypeListMapToTuple<f, TypeList<Ts...>> {
-  using type = std::tuple<decltype(f(std::declval<Ts>()))...>;
-};
-
-template<typename T, typename Ts> struct TypeListCons;
-
-template<typename T>
-struct TypeListCons<T, TypeList<>>
-{
-  using type = TypeList<T>;
-};
-
-template<typename T, typename... Ts>
-struct TypeListCons<T, TypeList<Ts...>>
-{
-  using type = TypeList<T, Ts...>;
-};
-
-template<template<typename> class F, typename T>
-struct TypeListFilter;
-
-template<template<typename> class F>
-struct TypeListFilter<F, TypeList<>>
-{
-  using type = TypeList<>;
-};
-
-template<template<typename> class F, typename T, typename... Ts>
-struct TypeListFilter<F, TypeList<T, Ts...>> {
-  using rest = TypeListFilter<F, TypeList<Ts...>>::type;
-  using type = std::conditional<
-    F<T>::value,
-        typename TypeListCons<T, rest>::type,
-        rest>::type;
-};
 
 // https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
 template<typename F> struct FunctionTraits;
@@ -374,12 +297,12 @@ struct FunctionTraits<R(*)(Arg0, Args...)>
 {
   using Pointer = R(*)(Arg0, Args...);
   using RetType = R;
-  using ArgTypes = TypeList<Arg0, Args...>;
-  using ArgTypesNoFirst = TypeList<Args...>;
+  using ArgTypes = TypeList::TL<Arg0, Args...>;
+  using ArgTypesNoFirst = TypeList::TL<Args...>;
   using ArgTypesFirst = Arg0;
   static constexpr std::size_t ArgCount = 1 + sizeof...(Args);
   template<std::size_t N>
-    using NthArg = TypeListN<N,ArgTypes>;
+    using NthArg = TypeList::Nth<N,ArgTypes>;
   using Sequence = std::index_sequence_for<Arg0, Args...>;
   using SequenceNoFirst = std::index_sequence_for<Args...>;
 };
@@ -389,11 +312,11 @@ struct FunctionTraits<R(*)()>
 {
   using Pointer = R(*)();
   using RetType = R;
-  using ArgTypes = TypeList<>;
-  using ArgTypesNoFirst = TypeList<>;
+  using ArgTypes = TypeList::TL<>;
+  using ArgTypesNoFirst = TypeList::TL<>;
   static constexpr std::size_t ArgCount = 0;
   template<std::size_t N>
-    using NthArg = TypeListN<N,ArgTypes>;
+    using NthArg = TypeList::Nth<N,ArgTypes>;
   using Sequence = std::index_sequence_for<>;
   using SequenceNoFirst = std::index_sequence_for<>;
 };
@@ -403,12 +326,12 @@ struct FunctionTraits<R (C::*)(Args...)>
 {
   using Pointer = R (C::*)(Args...);
   using RetType = R;
-  using ArgTypes = TypeList<C,Args...>;
-  using ArgTypesNoFirst = TypeList<Args...>;
+  using ArgTypes = TypeList::TL<C,Args...>;
+  using ArgTypesNoFirst = TypeList::TL<Args...>;
   using ArgTypesFirst = C; // CR smuenzel: should this be a pointer?
   static constexpr std::size_t ArgCount = sizeof...(Args) + 1;
   template<std::size_t N>
-    using NthArg = TypeListN<N,ArgTypes>;
+    using NthArg = TypeList::Nth<N,ArgTypes>;
   using Sequence = std::index_sequence_for<C,Args...>;
   using SequenceNoFirst = std::index_sequence_for<Args...>;
 };

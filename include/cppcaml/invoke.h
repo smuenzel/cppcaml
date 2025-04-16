@@ -36,7 +36,7 @@ template<typename T>
 
 template<typename F>
 concept ArgumentsConvertible =
-TypeListForAll<HasOfCamlV,typename FunctionTraits<F>::ArgTypes>::value
+TypeList::ForAll<HasOfCamlV,typename FunctionTraits<F>::ArgTypes>::value
 ;
 
 template<typename F>
@@ -60,7 +60,7 @@ struct Invoke
   > struct InnerInvoke;
 
   template<typename... Args, size_t... Is>
-  struct InnerInvoke<TypeList<Args...>, std::index_sequence<Is...>> {
+  struct InnerInvoke<TypeList::TL<Args...>, std::index_sequence<Is...>> {
 
     static inline value operator()(decltype(Is, value{})... args) {
       auto args_tuple = std::make_tuple<Args...>(CamlType<Args>::of_caml(args)...);

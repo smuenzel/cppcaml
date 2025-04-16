@@ -77,7 +77,7 @@ namespace Cppcaml
     struct CamlTypenames;
 
   template <typename... Args>
-    struct CamlTypenames<TypeList<Args...>> {
+    struct CamlTypenames<TypeList::TL<Args...>> {
       static constexpr auto args
         = StaticCamlList<StaticCamlString<CamlType<Args>::typename_caml>...>();
       constexpr operator value() const { return (value)args; }
@@ -182,7 +182,7 @@ namespace Cppcaml
 
   void __attribute__((weak)) z(){};
 
-  using Z = ApplyAdapters<&z, TypeList<AdapterNoArg>>;
+  using Z = ApplyAdapters<&z, TypeList::TL<AdapterNoArg>>;
 
   void __attribute__((weak)) cz ( Void v )
   {
@@ -197,7 +197,7 @@ namespace Cppcaml
   namespace Cppcaml::UserDefinitions::Fun_##name { \
     using namespace Cppcaml; \
     using std::to_array; \
-    using adapters = AllAdapters<TypeList<__VA_ARGS__>>; \
+    using adapters = AllAdapters<TypeList::TL<__VA_ARGS__>>; \
     static_assert(adapters::size == 0 || adapters::size == 1); \
     using applied_adapters = ApplyAdapters<&f, adapters>; \
     using Caller = applied_adapters::Caller; \
