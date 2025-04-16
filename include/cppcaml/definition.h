@@ -179,13 +179,32 @@ namespace Cppcaml
   {
     return v;
   }
+
+  void __attribute__((weak)) z(){};
+
+  using Z = ApplyAdapters<&z, TypeList<AdapterNoArg>>;
+
+  void __attribute__((weak)) cz ( Void v )
+  {
+    static_assert(FunctionConvertible<decltype(&Z::Caller::call)>);
+    return Z::Caller::call(v);
+  }
+
+
 }
 
 #define DEF_CPPCAML(name, f, N, ...) \
   namespace Cppcaml::UserDefinitions::Fun_##name { \
     using namespace Cppcaml; \
     using std::to_array; \
-    using Definition = CamlFunctionDefinition<to_array(#name), &f>; \
+    using adapters = AllAdapters<TypeList<__VA_ARGS__>>; \
+    static_assert(adapters::size == 0 || adapters::size == 1); \
+    using applied_adapters = ApplyAdapters<&f, adapters>; \
+    using Caller = applied_adapters::Caller; \
+    static_assert(FunctionTraits<decltype(&Caller::call)>::ArgCount == N); \
+    static_assert(FunctionConvertible<decltype(&Caller::call)>); \
+    using Definition = CamlFunctionDefinition<to_array(#name), &Caller::call>; \
+    static_assert(FunctionTraits<decltype(&Definition::invoker.operator())>::ArgCount == N); \
     CPPCAML_WRAPN(ccwrap__##name, Definition::invoker, N); \
   }
 

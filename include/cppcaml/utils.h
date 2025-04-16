@@ -288,10 +288,13 @@ struct __attribute__((packed))
 
 template<typename... Ts> struct TypeList;
 
-template<> struct TypeList<> {};
+template<> struct TypeList<> {
+  static constexpr const size_t size = 0;
+};
 
 template<typename T, typename... Ts> struct TypeList<T, Ts...> {
   using Tail = TypeList<Ts...>;
+  static constexpr const size_t size = 1 + Tail::size;
 };
 
 template<size_t N, typename T> struct TypeListElt;
@@ -331,6 +334,38 @@ struct TypeListMapToTuple<f, TypeList<Ts...>> {
   using type = std::tuple<decltype(f(std::declval<Ts>()))...>;
 };
 
+template<typename T, typename Ts> struct TypeListCons;
+
+template<typename T>
+struct TypeListCons<T, TypeList<>>
+{
+  using type = TypeList<T>;
+};
+
+template<typename T, typename... Ts>
+struct TypeListCons<T, TypeList<Ts...>>
+{
+  using type = TypeList<T, Ts...>;
+};
+
+template<template<typename> class F, typename T>
+struct TypeListFilter;
+
+template<template<typename> class F>
+struct TypeListFilter<F, TypeList<>>
+{
+  using type = TypeList<>;
+};
+
+template<template<typename> class F, typename T, typename... Ts>
+struct TypeListFilter<F, TypeList<T, Ts...>> {
+  using rest = TypeListFilter<F, TypeList<Ts...>>::type;
+  using type = std::conditional<
+    F<T>::value,
+        typename TypeListCons<T, rest>::type,
+        rest>::type;
+};
+
 // https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
 template<typename F> struct FunctionTraits;
 
@@ -347,6 +382,20 @@ struct FunctionTraits<R(*)(Arg0, Args...)>
     using NthArg = TypeListN<N,ArgTypes>;
   using Sequence = std::index_sequence_for<Arg0, Args...>;
   using SequenceNoFirst = std::index_sequence_for<Args...>;
+};
+
+template<typename R>
+struct FunctionTraits<R(*)()>
+{
+  using Pointer = R(*)();
+  using RetType = R;
+  using ArgTypes = TypeList<>;
+  using ArgTypesNoFirst = TypeList<>;
+  static constexpr std::size_t ArgCount = 0;
+  template<std::size_t N>
+    using NthArg = TypeListN<N,ArgTypes>;
+  using Sequence = std::index_sequence_for<>;
+  using SequenceNoFirst = std::index_sequence_for<>;
 };
 
 template<typename C, typename R, typename... Args>
