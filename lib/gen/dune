@@ -1,0 +1,11 @@
+(library
+  (public_name cppcaml.gen)
+  (name cppcaml_gen)
+  (libraries core capitalization cppcaml_headers)
+  (foreign_stubs
+    (language cxx)
+    (names gen_stubs)
+    (flags :standard -Wall -g -O1 -std=c++23 -fconcepts-diagnostics-depth=8)
+    )
+  (preprocess (pps ppx_jane))
+)
