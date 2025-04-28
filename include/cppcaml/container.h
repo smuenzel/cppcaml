@@ -38,6 +38,7 @@ struct CamlTypeSharedPtrContainer {
   }
 
   static std::shared_ptr<T> to_representative(T* t) {
+    CAMLassert(t != nullptr);
     return std::shared_ptr<T>(t, Deleter());
   }
 
