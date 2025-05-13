@@ -3,7 +3,7 @@
   (archive_name cppcaml_test_stubs)
   (names test_stubs)
   (language cxx)
-  (flags :standard -Wall -O3 -std=c++23 -fconcepts-diagnostics-depth=8)
+  (flags :standard -Wall -g -O1 -std=c++23 -fconcepts-diagnostics-depth=8)
   (include_dirs ../include)
   )
 
@@ -12,15 +12,16 @@
   (modules)
   (foreign_archives
     cppcaml_test_stubs
-    ../lib/apiinfo/cppcaml_apiinfo
   )
   (modes native)
+  (libraries cppcaml_headers)
   (library_flags -linkall -cclib -Wl,-lstdc++)
   )
 
 (cinaps
   (files test_ocaml.ml)
-  (libraries core cppcaml_lib cppcaml_test_stubs)
+  (libraries core cppcaml_test_stubs cppcaml_gen)
+  (link_flags :standard -linkall)
   )
 
 (library
