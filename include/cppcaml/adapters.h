@@ -80,6 +80,30 @@ struct AdapterNullable
   };
 };
 
+struct AdapterNullableReturn
+{
+  using IsAdapter = std::true_type;
+
+  template<auto f> struct Adapt
+  {
+    using ResultType = MakeNullablePointer<typename FunctionTraits<decltype(f)>::RetType>::type;
+    using ArgTypes = typename FunctionTraits<decltype(f)>::ArgTypes;
+
+    template<
+      typename ArgTypes = ArgTypes
+      > struct Inner;
+
+    template<typename... Args>
+      struct Inner<TypeList::TL<Args...>> {
+        static ResultType call(Args... args) {
+          return f(args...);
+        }
+      };
+
+    struct Caller : public Inner<> { };
+  };
+};
+
 
 template <typename T>
 // An adapter contains an Adapt template, taking a function argument

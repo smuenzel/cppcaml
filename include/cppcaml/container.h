@@ -95,7 +95,7 @@ struct CamlTypeNullableSharedPtrContainer {
     if(t.p == nullptr) {
       return nullptr;
     } else {
-      return std::shared_ptr<T>(t, Deleter());
+      return std::shared_ptr<T>(t.p, Deleter());
     }
   }
 
