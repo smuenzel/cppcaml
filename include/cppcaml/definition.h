@@ -198,7 +198,6 @@ namespace Cppcaml
     using namespace Cppcaml; \
     using std::to_array; \
     using adapters = AllAdapters<TypeList::TL<__VA_ARGS__>>; \
-    static_assert(adapters::size == 0 || adapters::size == 1); \
     using applied_adapters = ApplyAdapters<&f, adapters>; \
     using Caller = applied_adapters::Caller; \
     static_assert(FunctionTraits<decltype(&Caller::call)>::ArgCount == N); \
