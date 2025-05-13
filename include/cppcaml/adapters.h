@@ -51,10 +51,33 @@ struct AdapterNoArg
     };
 };
 
+template <int ArgNumber>
+struct AdapterNullable
+{
+  template<auto f> struct Adapt
+  {
+    using ResultType = typename FunctionTraits<decltype(f)>::RetType;
+    using ArgTypes = TypeList::ApplyAt<ArgNumber, MakeNullablePointer ,typename FunctionTraits<decltype(f)>::ArgTypes>::type;
+
+    template<
+      typename ArgTypes = ArgTypes
+      > struct Inner;
+
+    template<typename... Args>
+      struct Inner<TypeList::TL<Args...>> {
+        static auto call(Args... args) {
+          return f(args...);
+        }
+      };
+
+    struct Caller : public Inner<> { };
+  };
+};
+
 
 template <typename T>
 concept IsAdapter =
-std::same_as<T, AdapterDummy> || std::same_as<T, AdapterNoArg>
+std::same_as<T, AdapterDummy> || std::same_as<T, AdapterNoArg> || std::same_as<T, AdapterNullable<1>>
 ;
 
 template <typename T>

@@ -95,6 +95,27 @@ struct Filter<F, TL<T, Ts...>> {
       >::type;
 };
 
+template<int I, template<typename> class F, typename T>
+struct ApplyAt;
+
+template<int I, template<typename> class F>
+struct ApplyAt<I, F, TL<>> {
+  using type = TL<>;
+};
+
+template<int I, template<typename> class F, typename T, typename... Ts>
+struct ApplyAt<I, F, TL<T, Ts...>> {
+  using rest = ApplyAt<I-1, F, TL<Ts...>>::type;
+  using type =
+    std::conditional
+      < I == 0
+      , typename Cons<typename F<T>::type, rest>::type
+      , typename Cons<T, rest>::type
+      >::type;
+};
+
+
+
 }
 
 };

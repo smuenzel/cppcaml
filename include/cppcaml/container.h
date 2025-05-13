@@ -36,6 +36,14 @@ struct NullablePointer
   operator T*() const { return p; }
 };
 
+template<typename T>
+struct MakeNullablePointer;
+
+template<typename T>
+struct MakeNullablePointer<T*> {
+  using type = NullablePointer<T>;
+};
+
 template<typename T, auto name, typename Deleter = FreeDeleter>
 struct CamlTypeSharedPtrContainer {
   static constexpr const auto typename_caml = name;
@@ -45,6 +53,7 @@ struct CamlTypeSharedPtrContainer {
   using Representative = std::shared_ptr<T>;
   using Value = std::shared_ptr<T>;
   using ValueExtraParameters = std::tuple<>;
+  using ContainerDeleter = Deleter;
 
   static value to_caml(const std::shared_ptr<T>& sp) {
     return SharedPtrCustomValue<T>::allocate(std::move(sp));
@@ -70,6 +79,7 @@ struct CamlTypeNullableSharedPtrContainer {
   using Representative = std::shared_ptr<T>;
   using Value = std::shared_ptr<T>;
   using ValueExtraParameters = std::tuple<>;
+  using ContainerDeleter = Deleter;
 
   static value to_caml(const std::shared_ptr<T>& sp) {
     if(sp == nullptr) {
@@ -103,8 +113,22 @@ struct CamlTypeNullableSharedPtrContainer {
 template<>
 struct CamlType<int*> : CamlTypeSharedPtrContainer<int, to_array("int_ptr")> { };
 
+/*
 template<>
 struct CamlType<NullablePointer<int>> : CamlTypeNullableSharedPtrContainer<int, to_array("int_ptr")> { };
+*/
+
+template<typename T>
+requires std::is_base_of_v
+  < CamlTypeSharedPtrContainer<T, CamlType<T*>::typename_caml, typename CamlType<T*>::ContainerDeleter>
+  , CamlType<T*> >
+struct CamlType<NullablePointer<T>>
+  : public CamlTypeNullableSharedPtrContainer
+      < T
+      , CamlType<T*>::typename_caml
+      , typename CamlType<T*>::ContainerDeleter
+      >
+{};
 
 
 static_assert(HasToCaml<int*>);
