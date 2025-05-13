@@ -12,6 +12,8 @@ namespace Cppcaml
 
 struct AdapterDummy
 {
+  using IsAdapter = std::true_type;
+
   template<auto f> struct Adapt
   {
     using ResultType = typename FunctionTraits<decltype(f)>::RetType;
@@ -36,6 +38,8 @@ struct AdapterDummy
 
 struct AdapterNoArg
 {
+  using IsAdapter = std::true_type;
+
   template<auto f>
     requires (std::same_as<typename FunctionTraits<decltype(f)>::ArgTypes, TypeList::TL<>>)
     struct Adapt
@@ -54,6 +58,8 @@ struct AdapterNoArg
 template <int ArgNumber>
 struct AdapterNullable
 {
+  using IsAdapter = std::true_type;
+
   template<auto f> struct Adapt
   {
     using ResultType = typename FunctionTraits<decltype(f)>::RetType;
@@ -76,8 +82,9 @@ struct AdapterNullable
 
 
 template <typename T>
+// An adapter contains an Adapt template, taking a function argument
 concept IsAdapter =
-std::same_as<T, AdapterDummy> || std::same_as<T, AdapterNoArg> || std::same_as<T, AdapterNullable<1>>
+std::same_as<typename T::IsAdapter, std::true_type>
 ;
 
 template <typename T>
