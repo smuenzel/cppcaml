@@ -61,6 +61,170 @@ let print_as_comment () =
   in
   printf !"(* %d functions *)\n" count
 
+module With_prefix = struct
+  module Module_contents = struct
+    type t =
+      { functions : function_record String.Map.t
+      ; enums : enum_record String.Map.t
+      ; types : string String.Map.t
+      } [@@deriving sexp]
+
+    let empty = { functions = String.Map.empty; enums = String.Map.empty; types = String.Map.empty }
+  end
+  
+  module Keychainable_string_list = struct
+    include Trie.Keychainable.Of_list(String)
+
+    let sexp_of_t (t : t) =
+      [%sexp_of: string list] (List.rev t)
+  end
+
+  type trie =
+    ( Keychainable_string_list.t
+    , Module_contents.t
+    , Keychainable_string_list.keychain_description [@sexp.opaque]
+    ) Trie.t
+  [@@deriving sexp_of]
+
+  type t =
+    { type_alias : string String.Map.t
+    } [@@deriving sexp]
+
+  let make_type_aliases (trie : trie) =
+    Trie.foldi
+      trie
+      ~init:String.Map.empty
+      ~f:(fun acc ~keychain ~data ->
+          Map.fold data.types ~init:acc ~f:(fun ~key ~data acc ->
+              let target_type =
+                let module_part =
+                  List.rev_map ~f:String.capitalize keychain
+                  |> String.concat ~sep:"."
+                in
+                let type_part = String.lowercase key in
+                module_part ^ "." ^ type_part
+              in
+              Map.add_exn acc ~key:data ~data:target_type
+            )
+        )
+
+  let rec create_trie ~acc_parent ~acc_current source target =
+    let target =
+      match Trie.datum source with
+      | None -> target
+      | Some kind ->
+        let name = String.concat ~sep:"_" (List.rev acc_current) in
+        Trie.change target
+          (Trie.Keychainable.keychain_of_rev_keys Keychainable_string_list.keychainable
+             acc_parent)
+          ~f:(fun current ->
+             let current = Option.value ~default:Module_contents.empty current in
+             let functions =
+               match kind with
+               | `Function fr -> 
+                 Map.set current.functions ~key:name ~data:fr
+               | _ -> current.functions
+             in
+             let enums =
+               match kind with
+               | `Enum er ->
+                 Map.set current.enums ~key:name ~data:er
+               | _ -> current.enums
+             in
+             let types =
+               match kind with
+               | `Type t ->
+                 Map.set current.types ~key:name ~data:t
+               | _ -> current.types
+             in
+             Some { Module_contents.functions; enums; types }
+          )
+    in
+    let source_subtries = Trie.tries source in
+    let length = Map.length source_subtries in
+    let acc_parent, acc_current =
+      match length with
+      | i when i > 1 ->
+        let acc_parent = acc_parent @ [ String.concat ~sep:"_" acc_current ] in
+        let acc_current = [] in
+        acc_parent, acc_current
+      | _ -> acc_parent, acc_current
+    in
+    Map.fold source_subtries ~init:target ~f:(fun ~key ~data target ->
+        create_trie ~acc_parent ~acc_current:(key :: acc_current) data target
+      )
+
+  let create_trie source =
+    create_trie
+      ~acc_parent:[]
+      ~acc_current:[]
+      source
+      (Trie.empty Keychainable_string_list.keychainable)
+end
+
+let rec print_trie ~indent ~(acc : string list) trie =
+  begin match Trie.datum trie with
+  | None -> ()
+  | Some kind ->
+    printf "%sdata @ %s: %s\n" indent
+      (String.concat ~sep:"_" (List.rev acc))
+      (match kind with `Function _ -> "function" | `Enum _ -> "enum" | `Type _ -> "type")
+  end;
+  let tries = Trie.tries trie in
+  match Map.length tries with
+  | 0 -> ()
+  | i when i > 1 ->
+    printf "%ssplit @ %s\n" indent (String.concat ~sep:"_" (List.rev acc));
+    let indent = indent ^ "  " in
+    Map.iteri tries ~f:(fun ~key ~data ->
+        print_trie ~indent ~acc:[ key ] data
+      )
+  | _ ->
+    Map.iteri tries ~f:(fun ~key ~data ->
+        let acc = key :: acc in
+        print_trie ~indent ~acc data
+      )
+
+let print_prefix types =
+  printf "(*\n";
+  let module Keychainable = Trie.Keychainable.Of_list(String) in
+  let trie =
+    List.fold types
+      ~init:(Trie.empty Keychainable.keychainable)
+      ~f:(fun trie typ ->
+          let keychain = (String.split ~on:'_' typ) @ [ "t" ] in
+          Trie.add_exn trie ~keychain ~data:(`Type typ)
+        )
+  in
+  let trie = ref trie in
+  let _count =
+    iter_functions
+      (fun fr ->
+         let keychain = String.split ~on:'_' fr.name in
+         trie := Trie.add_exn !trie ~keychain ~data:(`Function fr);
+      )
+  in
+  let _count =
+    iter_enums
+      (fun er ->
+         let keychain = String.split ~on:'_' er.name in
+         trie := Trie.add_exn !trie ~keychain ~data:(`Enum er);
+      )
+  in
+  print_trie ~indent:"" ~acc:[] !trie;
+  printf "*)\n";
+  printf "(*\n";
+  let t' = With_prefix.create_trie !trie in
+  print_s ([%sexp_of: With_prefix.trie] t');
+  printf "*)\n";
+  printf "(*\n";
+  let type_alias = With_prefix.make_type_aliases t' in
+  print_s ([%sexp_of: With_prefix.t] { type_alias });
+  printf "*)\n";
+
+  ()
+
+
 
 let print_externals () =
   printf "\n";
