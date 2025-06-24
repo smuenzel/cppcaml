@@ -19,117 +19,55 @@ struct my_rc {
   }
 };
 
-using namespace CppCaml;
 
-template<> struct CppCaml::AutoConversion<struct my_rc*>{
-  static const constexpr AutoConversionKind kind = AutoConversionKind::SharedPointer;
+void x(int, int, const char*, uint8_t, int64_t)
+{
 
 };
 
-inline bool apix(bool x, bool y){
-  return x+y;
-}
+using Invoke0 = Cppcaml::Invoke<x>;
 
-DECL_API_TYPENAME(int, int);
+using TypenameInt = Cppcaml::StaticCamlString<std::to_array("int")>;
 
-F_PROP(apix,ReleasesLock, false);
+static const constexpr auto name1 = Cppcaml::StaticCamlString<std::to_array("x_function")>();
 
-CPPCAML_REGISTER_FUN(example
-    , .wrapper_name = "caml_hello"
-    , .function_name = "apix"
-    , .description = CppCaml::make_function_description<apix>()
-    );
+static const constexpr auto args0 = Cppcaml::StaticCamlList<TypenameInt, TypenameInt>();
+/*
+static const constexpr auto args0 = Cppcaml::StaticCamlList<>();
+*/
 
-#define CAT(A,B) A ## B
+/*
+static const constexpr Cppcaml::CamlFunctionRecord info1
+__attribute__((used,retain,section("cppcaml_info_function")))
+=
+{ .v_name = (value)name1,
+  .v_args = (value)args0,
+  .v_return = Val_unit,
+};
 
-#define REP1(F) CAT(F,0)
-#define REP2(F) CAT(F,0), CAT(F,1)
-#define REP3(F) CAT(F,0), CAT(F,1), CAT(F,2)
-#define REP4(F) CAT(F,0), CAT(F,1), CAT(F,2), CAT(F,4)
+static const constexpr auto name2 = Cppcaml::StaticCamlString<std::to_array("y_function")>();
 
-#define VALUE(X) value X
+static const constexpr auto args1 = Cppcaml::OcamlTypenames<Invoke0::ArgTypes>();
 
-#define API_IMPL(WRAPPER_NAME,API_NAME,REP) \
-apireturn WRAPPER_NAME (REP(VALUE(v))){ \
-  return CppCaml::CallApi<API_NAME>::invoke(REP(v)); \
-}
+static const constexpr Cppcaml::CamlFunctionRecord info2
+__attribute__((used,retain,section("cppcaml_info_function")))
+=
+{ .v_name = (value)name2,
+  .v_args = (value)args1,
+  .v_return = Val_unit,
+};
+*/
 
-API_IMPL(caml_hello,apix,REP2)
-
-
-apireturn caml_test_unit(value){
+extern "C" CAMLprim value caml_test_unit(value){
   return Val_unit;
 }
 
-void print_x(){
-  printf("e\n");
+/*
+namespace XXX
+{
+  using Definition = Cppcaml::OcamlFunctionDefinition<std::to_array("my_function"), x>;
+  CPPCAML_WRAPN(cppwrap_my_function, Definition::invoker, 5)
 }
+*/
 
-struct MyClass : private boost::noncopyable {
-  int x;
-
-  void incr() { 
-    x++;
-  }
-
-  int get_x() { return x; }
-
-  MyClass(int x) : x(x) {}
-
-  MyClass(MyClass&& rhs) = default;
-};
-
-DECL_API_TYPENAME(MyClass,myclass);
-
-template<> struct CppCaml::CamlConversion<MyClass> {
-  struct ToValue {
-    static const bool allocates = false;
-
-    static inline value c(const MyClass&m){
-      return Val_int(m.x);
-    }
-  };
-
-  struct OfValue {
-    struct Representative {
-      MyClass m;
-      operator MyClass&() { return m; }
-
-      Representative(value v) : m(Int_val(v)){
-
-      }
-    };
-  };
-};
-
-template<>
-struct CppCaml::CamlConversion<int> {
-  struct ToValue {
-    static const bool allocates = false;
-
-    static inline value c(const int& b){
-      return Val_int(b);
-    }
-  };
-
-  struct OfValue {
-    struct Representative {
-      int v;
-      operator int&() { return v; }
-    };
-
-    static inline Representative c(value v){
-      return { .v = Int_val(v) };
-    }
-  };
-};
-
-
-apireturn caml_myclass_incr(value mc){
-  return CppCaml::CallApi<&MyClass::incr>::invoke(mc);
-}
-
-apireturn caml_myclass_get_x(value mc){
-  return CppCaml::CallApi<&MyClass::get_x>::invoke(mc);
-}
-
+DEF_CPPCAML(my_function, x, 5)
