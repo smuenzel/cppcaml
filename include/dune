@@ -1,0 +1,9 @@
+(library
+  (public_name cppcaml.headers)
+  (name        cppcaml_headers)
+  (public_headers
+    cppcaml.h
+    (glob_files "cppcaml/*.h")
+    (glob_files "fix8/*.hpp")
+    )
+  )
